@@ -20,6 +20,7 @@ export const usersTable = pgTable("users", {
   resetToken: text("reset_token"),
   resetTokenExpiresAt: timestamp("reset_token_expires_at"),
   isEmailVerified: boolean("is_email_verified").notNull().default(false),
+  profileImage: text("profile_image"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

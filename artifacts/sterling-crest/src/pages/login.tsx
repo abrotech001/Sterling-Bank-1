@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Shield, Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import { CrestfieldLogo } from "@/components/brand/logo";
 import type { User } from "@/lib/auth";
 
 type LoginForm = { email: string; password: string };
@@ -50,11 +51,11 @@ export default function LoginPage() {
         className="relative w-full max-w-md"
       >
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
-            <Shield className="w-7 h-7 text-primary" />
+          <div className="inline-flex items-center justify-center mb-4">
+            <CrestfieldLogo size={64} className="rounded-2xl" />
           </div>
           <h1 className="text-3xl font-bold">Welcome back</h1>
-          <p className="text-muted-foreground mt-1">Sign in to your Crestfield account</p>
+          <p className="text-muted-foreground mt-1">Sign in to your Crestfield Bank account</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">

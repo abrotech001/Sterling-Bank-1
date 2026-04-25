@@ -19,6 +19,7 @@ const formatUser = (user: typeof usersTable.$inferSelect) => ({
   kycLevel: user.kycLevel,
   hasPin: !!user.pinHash,
   accountNumber: user.accountNumber,
+  profileImage: user.profileImage,
   createdAt: user.createdAt,
 });
 
@@ -86,6 +87,55 @@ router.get("/profile", requireAuth, async (req, res) => {
   } catch (e) {
     req.log.error({ e }, "Error getting profile");
     res.status(500).json({ error: "Failed to get profile" });
+  }
+});
+
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
+router.post("/me/avatar", requireAuth, async (req, res) => {
+  const { image } = req.body as { image?: string };
+  if (!image || typeof image !== "string") {
+    res.status(400).json({ error: "Image data is required" });
+    return;
+  }
+
+  const match = image.match(/^data:image\/(jpeg|jpg|png);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) {
+    res.status(400).json({ error: "Only JPG and PNG images are allowed" });
+    return;
+  }
+
+  const base64 = match[2];
+  const sizeBytes = Math.floor((base64.length * 3) / 4);
+  if (sizeBytes > MAX_AVATAR_BYTES) {
+    res.status(400).json({ error: `Image is too large. Maximum size is 5MB.` });
+    return;
+  }
+
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ profileImage: image, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    res.json({ user: formatUser(updated) });
+  } catch (e) {
+    req.log.error({ e }, "Error updating profile image");
+    res.status(500).json({ error: "Failed to update profile image" });
+  }
+});
+
+router.delete("/me/avatar", requireAuth, async (req, res) => {
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ profileImage: null, updatedAt: new Date() })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    res.json({ user: formatUser(updated) });
+  } catch (e) {
+    req.log.error({ e }, "Error removing profile image");
+    res.status(500).json({ error: "Failed to remove profile image" });
   }
 });
 

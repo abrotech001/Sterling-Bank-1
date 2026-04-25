@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { User, Lock, Copy, KeyRound, Check } from "lucide-react";
+import { User, Lock, Copy, KeyRound, Check, Camera, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,12 +28,94 @@ type PinForm = {
   confirmPin: string;
 };
 
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error("Could not read the selected file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function resizeImageToDataUrl(file: File, maxSize = 512): Promise<string> {
+  const dataUrl = await fileToDataUrl(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error("decode-failed"));
+      i.src = dataUrl;
+    });
+    const ratio = Math.min(1, maxSize / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * ratio));
+    const h = Math.max(1, Math.round(img.height * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0, w, h);
+    const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+    return canvas.toDataURL(mime, mime === "image/jpeg" ? 0.9 : undefined);
+  } catch {
+    return dataUrl;
+  }
+}
+
 export default function SettingsPage() {
   const { user, refresh } = useAuth();
   const { toast } = useToast();
   const [profileLoading, setProfileLoading] = useState(false);
   const [passLoading, setPassLoading] = useState(false);
   const [pinLoading, setPinLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const onPickAvatar = () => fileInputRef.current?.click();
+
+  const onAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (!["image/jpeg", "image/jpg", "image/png"].includes(file.type)) {
+      toast({ title: "Unsupported file type", description: "Please upload a JPG or PNG image.", variant: "destructive" });
+      return;
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast({ title: "File too large", description: "Maximum file size is 5MB.", variant: "destructive" });
+      return;
+    }
+
+    setAvatarLoading(true);
+    try {
+      const image = await resizeImageToDataUrl(file, 512);
+      await api.post("/users/me/avatar", { image });
+      await refresh();
+      toast({ title: "Profile photo updated" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to update profile photo";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    setAvatarLoading(true);
+    try {
+      await api.delete("/users/me/avatar");
+      await refresh();
+      toast({ title: "Profile photo removed" });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to remove";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
 
   const { register: regProfile, handleSubmit: handleProfile } = useForm<ProfileForm>({
     defaultValues: {
@@ -127,9 +209,17 @@ export default function SettingsPage() {
 
         <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center text-lg sm:text-xl font-bold text-primary flex-shrink-0">
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </div>
+            {user?.profileImage ? (
+              <img
+                src={user.profileImage}
+                alt={`${user?.firstName ?? ""} ${user?.lastName ?? ""}`}
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full object-cover border border-border flex-shrink-0"
+              />
+            ) : (
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center text-lg sm:text-xl font-bold text-primary flex-shrink-0">
+                {user?.firstName?.[0]}{user?.lastName?.[0]}
+              </div>
+            )}
             <div className="min-w-0">
               <h3 className="font-semibold text-sm sm:text-base truncate">{user?.firstName} {user?.lastName}</h3>
               <p className="text-muted-foreground text-xs truncate">@{user?.username} · {user?.email}</p>
@@ -150,7 +240,57 @@ export default function SettingsPage() {
             <TabsTrigger value="passcode" className="flex-1 gap-1 text-xs sm:text-sm"><KeyRound className="w-3.5 h-3.5" />Passcode</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="profile" className="mt-3">
+          <TabsContent value="profile" className="mt-3 space-y-3">
+            <div className="bg-card border border-border rounded-2xl p-4">
+              <div className="flex items-start sm:items-center gap-4 flex-col sm:flex-row">
+                <div className="relative">
+                  {user?.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt="Profile"
+                      className="w-20 h-20 rounded-full object-cover border-2 border-border"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-full bg-primary/15 border-2 border-border flex items-center justify-center text-2xl font-bold text-primary">
+                      {user?.firstName?.[0]}{user?.lastName?.[0]}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onPickAvatar}
+                    disabled={avatarLoading}
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md hover:opacity-90 disabled:opacity-50"
+                    aria-label="Change profile photo"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm">Profile Photo</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">JPG or PNG, up to 5MB. Shown across your account.</p>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button type="button" variant="outline" size="sm" onClick={onPickAvatar} disabled={avatarLoading} className="h-8 text-xs gap-1.5">
+                      <Camera className="w-3.5 h-3.5" />
+                      {avatarLoading ? "Uploading..." : user?.profileImage ? "Change photo" : "Upload photo"}
+                    </Button>
+                    {user?.profileImage && (
+                      <Button type="button" variant="ghost" size="sm" onClick={removeAvatar} disabled={avatarLoading} className="h-8 text-xs gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    className="hidden"
+                    onChange={onAvatarChange}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="bg-card border border-border rounded-2xl p-4">
               <form onSubmit={handleProfile(updateProfile)} className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
