@@ -1,10 +1,7 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
-import { createServer } from "http";
 import { logger } from "./lib/logger";
-import { initWebSocket } from "./lib/websocket";
-import { initTelegramBots } from "./lib/telegram";
 import healthRouter from "./routes/health";
 import authRouter from "./routes/auth";
 import usersRouter from "./routes/users";
@@ -18,8 +15,9 @@ import supportRouter from "./routes/support";
 import locationRouter from "./routes/location";
 import vaultsRouter from "./routes/vaults";
 import cryptoRouter from "./routes/crypto";
+import telegramWebhookRouter from "./routes/telegram-webhook";
 
-const app: Express = express();
+export const app: Express = express();
 
 app.use(
   pinoHttp({
@@ -59,10 +57,6 @@ app.use("/api/ip-location", locationRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/vaults", vaultsRouter);
 app.use("/api/crypto", cryptoRouter);
+app.use("/api/telegram", telegramWebhookRouter);
 
-const httpServer = createServer(app);
-initWebSocket(httpServer);
-
-initTelegramBots().catch(e => logger.error({ e }, "Failed to init Telegram bots"));
-
-export default httpServer;
+export default app;
