@@ -1,7 +1,23 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
+  "buildCommand": "pnpm run build --filter @workspace/sterling-crest && pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
   "installCommand": "pnpm install",
-  "framework": null,
-  "outputDirectory": "artifacts/api-server/dist"
+  "outputDirectory": "artifacts/sterling-crest/dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.mjs?path=$1"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
 }
