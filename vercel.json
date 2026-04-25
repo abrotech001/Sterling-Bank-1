@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "buildCommand": "pnpm run build",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "projects": [
+    {
+      "name": "api-server",
+      "src": "artifacts/api-server",
+      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/api-server",
+      "outputDirectory": "artifacts/api-server/dist"
+    },
+    {
+      "name": "sterling-crest",
+      "src": "artifacts/sterling-crest",
+      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/sterling-crest",
+      "outputDirectory": "artifacts/sterling-crest/dist"
+    },
+    {
+      "name": "mockup-sandbox",
+      "src": "artifacts/mockup-sandbox",
+      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/mockup-sandbox",
+      "outputDirectory": "artifacts/mockup-sandbox/dist"
+    }
+  ]
+}
