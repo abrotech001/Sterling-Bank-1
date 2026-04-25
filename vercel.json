@@ -1,37 +1,16 @@
 {
-
   "buildCommand": "pnpm run build",
-
   "outputDirectory": "artifacts/nano-ledger-x/dist/public",
-
   "framework": "vite",
-
   "regions": ["iad1"],
-
   "rewrites": [
-
     {
-
       "source": "/api/(.*)",
-
       "destination": "/api/index.mjs"
-
     },
-
     {
-
       "source": "/(.*)",
-
       "destination": "/index.html"
-
     }
-
   ]
-
 }
-
-
-
-
-
-something like this ?
