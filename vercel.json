@@ -1,7 +1,37 @@
 {
-  "version": 2,
-  "buildCommand": "pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
-  "installCommand": "pnpm install",
-  "framework": null,
-  "outputDirectory": "artifacts/api-server/dist"
+
+  "buildCommand": "pnpm run build",
+
+  "outputDirectory": "artifacts/nano-ledger-x/dist/public",
+
+  "framework": "vite",
+
+  "regions": ["iad1"],
+
+  "rewrites": [
+
+    {
+
+      "source": "/api/(.*)",
+
+      "destination": "/api/index.mjs"
+
+    },
+
+    {
+
+      "source": "/(.*)",
+
+      "destination": "/index.html"
+
+    }
+
+  ]
+
 }
+
+
+
+
+
+something like this ?
