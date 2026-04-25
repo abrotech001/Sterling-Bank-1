@@ -466,15 +466,15 @@ function SwapModal({
 
   return (
     <ModalShell onClose={onClose} title="QuickSwap to Cash">
-      <div className="text-xs text-muted-foreground -mt-2">Convert your crypto holdings to USD and credit them to your bank balance.</div>
-      <div className="space-y-1.5">
-        <Label>Asset</Label>
+      <div className="text-[11px] text-muted-foreground -mt-1 leading-snug">Convert crypto to USD and credit your bank balance.</div>
+      <div className="space-y-1">
+        <Label className="text-xs">Asset</Label>
         <div className="grid grid-cols-5 gap-1">
           {assets.map((a) => (
             <button
               key={a.id}
               onClick={() => { setAsset(a.id); setAmount(""); }}
-              className={`p-2 rounded-lg text-xs font-bold transition-all ${
+              className={`py-1.5 rounded-md text-xs font-bold transition-all ${
                 asset === a.id ? `bg-gradient-to-br ${a.color} text-white` : "bg-background border border-border text-muted-foreground hover:text-foreground"
               }`}
               data-testid={`swap-asset-${a.id}`}
@@ -484,9 +484,9 @@ function SwapModal({
           ))}
         </div>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         <div className="flex items-center justify-between">
-          <Label>Amount in {sel.symbol}</Label>
+          <Label className="text-xs">Amount in {sel.symbol}</Label>
           <button
             type="button"
             onClick={() => setAmount(sel.available > 0 ? sel.available.toString() : "")}
@@ -504,28 +504,28 @@ function SwapModal({
           placeholder="0.00"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className={`h-11 transition-colors duration-150 ${
+          className={`h-9 transition-colors duration-150 ${
             amt > 0 && insufficient ? "border-destructive/60 focus-visible:ring-destructive/40" : ""
           }`}
           data-testid="input-swap-amount"
         />
-        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[11px]">
+        <div className="flex flex-wrap items-center justify-between gap-x-2 text-[11px] leading-tight">
           <span className="text-muted-foreground" data-testid="text-swap-available">
             Available: <span className="font-mono font-medium text-foreground">{sel.available.toFixed(8)} {sel.symbol}</span>
           </span>
           {sel.pendingAmt > 0 && (
-            <span className="text-yellow-500">{sel.pendingAmt} {sel.symbol} in pending swaps</span>
+            <span className="text-yellow-500">{sel.pendingAmt} {sel.symbol} pending</span>
           )}
         </div>
         <AnimatePresence initial={false}>
           {amt > 0 && insufficient && (
             <motion.p
               key="swap-insufficient"
-              initial={{ opacity: 0, y: -2 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -2 }}
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.12, ease: "easeOut" }}
-              className="text-[11px] text-destructive/90"
+              className="text-[11px] text-destructive/90 leading-tight overflow-hidden"
               data-testid="text-swap-insufficient"
             >
               Amount exceeds your available balance.
@@ -533,18 +533,18 @@ function SwapModal({
           )}
         </AnimatePresence>
       </div>
-      <div className="bg-background border border-border rounded-xl p-3 text-sm">
+      <div className="bg-background border border-border rounded-lg px-3 py-2 text-xs space-y-0.5">
         <div className="flex justify-between text-muted-foreground"><span>Rate</span><span>${sel.rate.toLocaleString()} / {sel.symbol}</span></div>
-        <div className="flex justify-between font-semibold mt-1"><span>You'll receive</span><span className="text-primary">{formatCurrency(cash)}</span></div>
+        <div className="flex justify-between font-semibold text-sm"><span>You'll receive</span><span className="text-primary">{formatCurrency(cash)}</span></div>
       </div>
       {user?.hasPin && (
-        <div className="space-y-1.5">
-          <Label>Transaction passcode</Label>
-          <Input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="h-11 tracking-widest text-center" data-testid="input-swap-pin" />
+        <div className="space-y-1">
+          <Label className="text-xs">Transaction passcode</Label>
+          <Input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="h-9 tracking-widest text-center" data-testid="input-swap-pin" />
         </div>
       )}
       <Button
-        className="w-full h-11"
+        className="w-full h-10"
         disabled={submitting || amt <= 0 || insufficient || noBalance}
         onClick={submit}
         data-testid="button-confirm-swap"
@@ -654,13 +654,13 @@ function ModalShell({ children, onClose, title }: { children: React.ReactNode; o
         onClick={(e) => e.stopPropagation()}
         className="bg-card border border-border rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card">
-          <h3 className="font-bold">{title}</h3>
+        <div className="flex items-center justify-between px-3.5 py-2.5 border-b border-border sticky top-0 bg-card">
+          <h3 className="font-bold text-sm">{title}</h3>
           <button onClick={onClose} className="p-1 rounded-lg hover:bg-background" data-testid="button-modal-close">
             <X className="w-4 h-4" />
           </button>
         </div>
-        <div className="p-4 space-y-4">{children}</div>
+        <div className="p-3.5 space-y-2.5">{children}</div>
       </motion.div>
     </motion.div>
   );
