@@ -372,6 +372,13 @@ router.delete("/:id", requireAuth, async (req, res) => {
       return;
     }
 
+    // Block deletion while admin review is pending — otherwise the activation
+    // fee can never be refunded if the user races the admin's reject button.
+    if (card.status === "pending_activation") {
+      res.status(400).json({ error: "This card is under review and cannot be removed until the review is complete." });
+      return;
+    }
+
     await db.delete(cardsTable).where(eq(cardsTable.id, cardId));
 
     await db.insert(adminLogsTable).values({

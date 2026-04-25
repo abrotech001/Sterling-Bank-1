@@ -191,18 +191,18 @@ export default function DashboardLayout({ children }: Props) {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen">
-        <header className="sticky top-0 z-20 h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between px-4 lg:px-6">
-          <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-card">
+      <div className="flex-1 lg:ml-64 flex flex-col min-h-screen min-w-0 overflow-x-hidden">
+        <header className="sticky top-0 z-20 h-14 border-b border-border bg-background/80 backdrop-blur-xl flex items-center justify-between gap-2 px-3 sm:px-4 lg:px-6 min-w-0">
+          <button onClick={() => setMobileOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-card flex-shrink-0">
             <Menu className="w-5 h-5" />
           </button>
-          <div className="lg:hidden flex items-center gap-2">
-            <CrestfieldLogo size={24} />
-            <span className="font-bold text-sm">Crestfield Bank</span>
+          <div className="lg:hidden flex items-center gap-2 min-w-0 flex-1 justify-center">
+            <CrestfieldLogo size={22} className="flex-shrink-0" />
+            <span className="font-bold text-sm truncate">Crestfield Bank</span>
           </div>
-          <div className="hidden lg:block" />
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="relative" onClick={() => navigate("/notifications")}>
+          <div className="hidden lg:block flex-1" />
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Button variant="ghost" size="icon" className="relative h-9 w-9" onClick={() => navigate("/notifications")}>
               <Bell className="w-5 h-5" />
               {unread > 0 && (
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
@@ -218,7 +218,7 @@ export default function DashboardLayout({ children }: Props) {
           </div>
         </header>
 
-        <main className="flex-1 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 pb-20 lg:pb-5">
+        <main className="flex-1 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 pb-20 lg:pb-5 min-w-0 w-full">
           {children}
         </main>
       </div>

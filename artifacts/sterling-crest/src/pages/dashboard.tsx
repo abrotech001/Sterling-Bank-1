@@ -92,16 +92,16 @@ export default function DashboardPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-4">
-        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-end justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight">Welcome back, {user?.firstName} 👋</h1>
+      <div className="max-w-6xl mx-auto space-y-4 min-w-0">
+        <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0} className="flex items-end justify-between gap-3 min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-[clamp(1.125rem,5vw,1.5rem)] font-bold leading-tight truncate">Welcome back, {user?.firstName} 👋</h1>
             <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Here's your financial overview</p>
           </div>
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-3 lg:gap-4">
-          <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp} className="lg:col-span-2">
+        <div className="grid lg:grid-cols-3 gap-3 lg:gap-4 min-w-0">
+          <motion.div custom={1} initial="hidden" animate="visible" variants={fadeUp} className="lg:col-span-2 min-w-0">
             <div className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-2xl p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="min-w-0">
@@ -109,8 +109,8 @@ export default function DashboardPage() {
                   {loading ? (
                     <Skeleton className="h-9 w-44" />
                   ) : (
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl sm:text-4xl font-bold tracking-tight truncate">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <h2 className="text-[clamp(1.375rem,8vw,2.25rem)] font-bold tracking-tight truncate">
                         {balanceVisible ? balance : "••••••"}
                       </h2>
                       <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground flex-shrink-0">
@@ -141,7 +141,7 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+          <motion.div custom={2} initial="hidden" animate="visible" variants={fadeUp} className="grid grid-cols-2 lg:grid-cols-1 gap-3 min-w-0">
             <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
               <div className="flex items-center gap-1.5 mb-1">
                 <Shield className="w-3.5 h-3.5 text-primary" />
@@ -183,10 +183,10 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        <div className="grid lg:grid-cols-5 gap-3 lg:gap-4">
+        <div className="grid lg:grid-cols-5 gap-3 lg:gap-4 min-w-0">
           {chartData.length > 0 && (
-            <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp} className="lg:col-span-3">
-              <div className="bg-card border border-border rounded-2xl p-3 sm:p-4">
+            <motion.div custom={3} initial="hidden" animate="visible" variants={fadeUp} className="lg:col-span-3 min-w-0">
+              <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 min-w-0 overflow-hidden">
                 <h3 className="font-semibold text-sm mb-3">Recent Activity</h3>
                 <ResponsiveContainer width="100%" height={170}>
                   <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -210,11 +210,11 @@ export default function DashboardPage() {
             </motion.div>
           )}
 
-          <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp} className={chartData.length > 0 ? "lg:col-span-2" : "lg:col-span-5"}>
-            <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 h-full">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="font-semibold text-sm">Recent Transactions</h3>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/transactions")} className="h-7 text-xs">View all</Button>
+          <motion.div custom={4} initial="hidden" animate="visible" variants={fadeUp} className={`${chartData.length > 0 ? "lg:col-span-2" : "lg:col-span-5"} min-w-0`}>
+            <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 h-full min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between mb-2 gap-2">
+                <h3 className="font-semibold text-sm truncate">Recent Transactions</h3>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/transactions")} className="h-7 text-xs flex-shrink-0">View all</Button>
               </div>
               {loading ? (
                 <div className="space-y-2">
@@ -229,16 +229,16 @@ export default function DashboardPage() {
                   {transactions.map((tx) => {
                     const dir = tx.direction ?? (tx.type === "deposit" || tx.type === "admin_fund" || tx.type === "gift_card" ? "incoming" : "outgoing");
                     return (
-                      <div key={tx.id} className="flex items-center gap-2.5 p-2 rounded-xl hover:bg-background transition-colors">
-                        <div className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center flex-shrink-0">
+                      <div key={tx.id} className="flex items-center gap-2 px-1 py-2 rounded-xl hover:bg-background transition-colors min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center flex-shrink-0">
                           {txIcon({ ...tx, direction: dir })}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs sm:text-sm font-medium truncate">
                             {tx.counterpartyName || tx.note || (tx.label ?? (dir === "incoming" ? "Received" : "Sent"))}
                           </div>
-                          <div className="text-[10px] sm:text-[11px] text-muted-foreground flex items-center gap-1">
-                            <span className={`text-[9px] font-bold uppercase ${
+                          <div className="text-[10px] sm:text-[11px] text-muted-foreground flex items-center gap-1 min-w-0">
+                            <span className={`text-[9px] font-bold uppercase truncate ${
                               tx.status === "pending" ? "text-yellow-500" :
                               tx.status === "failed" || tx.status === "rejected" ? "text-destructive" :
                               dir === "incoming" ? "text-primary" : "text-destructive"
@@ -247,15 +247,15 @@ export default function DashboardPage() {
                                 tx.status === "failed" || tx.status === "rejected" ? tx.status.toUpperCase() :
                                 (tx.label ?? (dir === "incoming" ? "Received" : "Sent"))}
                             </span>
-                            <span>•</span>
-                            <span>{new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                            <span className="flex-shrink-0">•</span>
+                            <span className="flex-shrink-0">{new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
-                          <div className={`text-xs sm:text-sm font-semibold ${dir === "incoming" ? "text-primary" : "text-foreground"}`}>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className={`text-xs sm:text-sm font-semibold tabular-nums ${dir === "incoming" ? "text-primary" : "text-foreground"}`}>
                             {dir === "incoming" ? "+" : "-"}{formatCurrency(tx.amount)}
                           </div>
-                          {statusIcon(tx.status)}
+                          <span className="flex-shrink-0">{statusIcon(tx.status)}</span>
                         </div>
                       </div>
                     );

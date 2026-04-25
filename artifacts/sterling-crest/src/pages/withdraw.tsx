@@ -193,7 +193,7 @@ export default function WithdrawPage() {
             </Button>
           )}
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold">Withdraw Funds</h1>
+            <h1 className="text-[clamp(1.125rem,5vw,1.5rem)] font-bold leading-tight">Withdraw Funds</h1>
             <p className="text-sm text-muted-foreground">
               {step === "method" && "Choose a withdrawal method"}
               {step === "details" && method && `${method.name} details`}
