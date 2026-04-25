@@ -8,6 +8,7 @@ import {
   generateAccountNumber, generateResetToken
 } from "../lib/auth";
 import { sendNewUserAlert } from "../lib/telegram";
+import { sendOtpEmail, sendWelcomeEmail } from "../lib/email";
 
 const router = Router();
 
@@ -70,6 +71,10 @@ router.post("/register", async (req, res) => {
 
     req.log.info({ userId: user.id, otp }, "OTP generated for new user");
 
+    sendOtpEmail(user.email, otp, user.firstName).catch((e) =>
+      req.log.error({ e }, "Failed to send OTP email")
+    );
+
     const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null;
     sendNewUserAlert({
       userId: user.id,
@@ -98,7 +103,7 @@ router.post("/register", async (req, res) => {
         accountNumber: user.accountNumber,
       },
       requiresOtp: true,
-      message: `Your OTP code is: ${otp} (valid for 15 minutes)`,
+      message: "We've sent a 6-digit verification code to your email. It will expire in 15 minutes.",
     });
   } catch (e) {
     req.log.error({ e }, "Error registering user");
@@ -140,6 +145,10 @@ router.post("/verify-otp", async (req, res) => {
       .returning();
 
     const token = generateToken(user.id);
+
+    sendWelcomeEmail(updatedUser.email, updatedUser.firstName || updatedUser.username, updatedUser.accountNumber).catch((e) =>
+      req.log.error({ e }, "Failed to send welcome email")
+    );
 
     res.json({
       user: {
