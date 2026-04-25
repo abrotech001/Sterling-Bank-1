@@ -11,6 +11,7 @@ const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 
 let adminBot: TelegramBot | null = null;
 let supportBot: TelegramBot | null = null;
+let initializedMode: "polling" | "webhook" | null = null;
 
 export function getAdminBot(): TelegramBot | null {
   return adminBot;
@@ -20,7 +21,13 @@ export function getSupportBot(): TelegramBot | null {
   return supportBot;
 }
 
-export async function initTelegramBots() {
+export type BotMode = "polling" | "webhook";
+
+export async function initTelegramBots(mode: BotMode = "polling") {
+  if (initializedMode === mode && adminBot && supportBot) {
+    return;
+  }
+
   if (!ADMIN_BOT_TOKEN) {
     logger.warn("TELEGRAM_BOT_TOKEN not set, admin bot disabled");
     return;
@@ -30,13 +37,49 @@ export async function initTelegramBots() {
     return;
   }
 
-  adminBot = new TelegramBot(ADMIN_BOT_TOKEN, { polling: true });
-  supportBot = new TelegramBot(SUPPORT_BOT_TOKEN, { polling: true });
+  const opts = mode === "polling" ? { polling: true } : {};
+  adminBot = new TelegramBot(ADMIN_BOT_TOKEN, opts);
+  supportBot = new TelegramBot(SUPPORT_BOT_TOKEN, opts);
 
   setupAdminBotHandlers(adminBot);
   setupSupportBotHandlers(supportBot);
 
-  logger.info("Telegram bots initialized");
+  initializedMode = mode;
+  logger.info({ mode }, "Telegram bots initialized");
+}
+
+export function processTelegramUpdate(
+  botType: "admin" | "support",
+  update: unknown,
+): void {
+  const bot = botType === "admin" ? adminBot : supportBot;
+  if (!bot) {
+    logger.warn({ botType }, "Received webhook update but bot not initialized");
+    return;
+  }
+  bot.processUpdate(update as TelegramBot.Update);
+}
+
+export async function setTelegramWebhooks(
+  baseUrl: string,
+  secretToken: string,
+): Promise<{ adminUrl: string; supportUrl: string }> {
+  if (!adminBot || !supportBot) {
+    await initTelegramBots("webhook");
+  }
+  if (!adminBot || !supportBot) {
+    throw new Error("Bots could not be initialized (missing tokens)");
+  }
+  const adminUrl = `${baseUrl}/api/telegram/webhook/admin`;
+  const supportUrl = `${baseUrl}/api/telegram/webhook/support`;
+  await adminBot.setWebHook(adminUrl, { secret_token: secretToken });
+  await supportBot.setWebHook(supportUrl, { secret_token: secretToken });
+  return { adminUrl, supportUrl };
+}
+
+export async function deleteTelegramWebhooks(): Promise<void> {
+  if (adminBot) await adminBot.deleteWebHook();
+  if (supportBot) await supportBot.deleteWebHook();
 }
 
 function setupAdminBotHandlers(bot: TelegramBot) {

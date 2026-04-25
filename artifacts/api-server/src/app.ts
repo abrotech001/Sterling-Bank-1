@@ -15,6 +15,7 @@ import supportRouter from "./routes/support";
 import locationRouter from "./routes/location";
 import vaultsRouter from "./routes/vaults";
 import cryptoRouter from "./routes/crypto";
+import telegramWebhookRouter from "./routes/telegram-webhook";
 
 export const app: Express = express();
 
@@ -56,5 +57,6 @@ app.use("/api/ip-location", locationRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/vaults", vaultsRouter);
 app.use("/api/crypto", cryptoRouter);
+app.use("/api/telegram", telegramWebhookRouter);
 
 export default app;
