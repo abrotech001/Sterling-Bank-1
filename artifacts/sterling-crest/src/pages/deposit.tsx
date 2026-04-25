@@ -79,10 +79,10 @@ export default function DepositPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-4xl mx-auto space-y-5">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Crypto Deposit</h1>
-          <p className="text-sm text-muted-foreground">Receive crypto into your Crestfield wallet</p>
+      <div className="max-w-4xl mx-auto space-y-5 min-w-0">
+        <div className="min-w-0">
+          <h1 className="text-[clamp(1.125rem,5vw,1.5rem)] font-bold leading-tight">Crypto Deposit</h1>
+          <p className="text-[clamp(0.75rem,3vw,0.875rem)] text-muted-foreground">Receive crypto into your Crestfield wallet</p>
         </div>
 
         <CryptoTab toast={toast} />
@@ -266,17 +266,17 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
 
   return (
     <div className="space-y-5">
-      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-border rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs text-muted-foreground">Total Crypto Holdings (est.)</div>
-          <div className="text-3xl font-bold mt-1" data-testid="text-crypto-total">{formatCurrency(totalUsd)}</div>
+      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="text-[clamp(0.7rem,2.8vw,0.75rem)] text-muted-foreground">Total Crypto Holdings (est.)</div>
+          <div className="text-[clamp(1.375rem,7vw,1.875rem)] font-bold mt-1 truncate" data-testid="text-crypto-total">{formatCurrency(totalUsd)}</div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setSwapOpen(true)} data-testid="button-quickswap">
-            <ArrowLeftRight className="w-4 h-4 mr-1.5" /> QuickSwap
+          <Button variant="outline" size="sm" onClick={() => setSwapOpen(true)} data-testid="button-quickswap" className="text-xs">
+            <ArrowLeftRight className="w-3.5 h-3.5 mr-1" /> QuickSwap
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setSeedOpen(true)} data-testid="button-view-seed">
-            <Eye className="w-4 h-4 mr-1.5" /> View Recovery Phrase
+          <Button variant="outline" size="sm" onClick={() => setSeedOpen(true)} data-testid="button-view-seed" className="text-xs">
+            <Eye className="w-3.5 h-3.5 mr-1" /> Recovery Phrase
           </Button>
         </div>
       </div>
@@ -348,23 +348,23 @@ function CryptoCard({
 }) {
   const usd = asset.balance * asset.rate;
   return (
-    <div className="bg-card border border-border rounded-2xl p-4 space-y-3" data-testid={`card-asset-${asset.id}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center p-1">
+    <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 space-y-3 min-w-0" data-testid={`card-asset-${asset.id}`}>
+      <div className="flex items-center justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center p-1 flex-shrink-0">
             {asset.id === "sol" ? SOLANA_LOGO_SVG : <img src={asset.logo} alt={asset.symbol} className="w-7 h-7" loading="lazy" />}
           </div>
-          <div>
-            <div className="font-semibold text-sm">{asset.name}</div>
-            <div className="text-[11px] text-muted-foreground">${asset.rate.toLocaleString()} / {asset.symbol}</div>
+          <div className="min-w-0">
+            <div className="font-semibold text-sm truncate">{asset.name}</div>
+            <div className="text-[11px] text-muted-foreground truncate">${asset.rate.toLocaleString()} / {asset.symbol}</div>
           </div>
         </div>
       </div>
-      <div>
-        <div className="text-xl font-bold">{asset.balance} <span className="text-xs text-muted-foreground font-normal">{asset.symbol}</span></div>
-        <div className="text-xs text-muted-foreground">≈ {formatCurrency(usd)}</div>
+      <div className="min-w-0">
+        <div className="text-[clamp(1rem,5vw,1.25rem)] font-bold truncate">{asset.balance} <span className="text-xs text-muted-foreground font-normal">{asset.symbol}</span></div>
+        <div className="text-xs text-muted-foreground truncate">≈ {formatCurrency(usd)}</div>
         {asset.pendingAmt > 0 && (
-          <div className="text-[10px] text-yellow-500 mt-0.5">{asset.pendingAmt} {asset.symbol} swap pending</div>
+          <div className="text-[10px] text-yellow-500 mt-0.5 truncate">{asset.pendingAmt} {asset.symbol} swap pending</div>
         )}
       </div>
       <div className="flex items-center justify-between gap-2 bg-background border border-border rounded-lg px-2 py-1.5">

@@ -128,11 +128,11 @@ export default function CardsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-6xl mx-auto space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div>
-            <h1 className="text-2xl font-bold">My Cards</h1>
-            <p className="text-muted-foreground">Manage your virtual cards and linked bank cards</p>
+      <div className="max-w-6xl mx-auto space-y-4 min-w-0">
+        <div className="flex items-center justify-between flex-wrap gap-3 min-w-0">
+          <div className="min-w-0">
+            <h1 className="text-[clamp(1.25rem,5.5vw,1.5rem)] font-bold leading-tight">My Cards</h1>
+            <p className="text-[clamp(0.75rem,3vw,0.875rem)] text-muted-foreground">Manage your virtual cards and linked bank cards</p>
           </div>
           <Dialog open={issueOpen} onOpenChange={setIssueOpen}>
             <DialogTrigger asChild>
@@ -326,16 +326,18 @@ function CardItem({
             {revealed ? "Hide" : "Reveal"}
           </Button>
         )}
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5 text-destructive hover:text-destructive"
-          onClick={onDelete}
-          data-testid={`button-delete-${card.id}`}
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-          Remove
-        </Button>
+        {!isPending && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-destructive hover:text-destructive"
+            onClick={onDelete}
+            data-testid={`button-delete-${card.id}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Remove
+          </Button>
+        )}
       </div>
     </motion.div>
   );

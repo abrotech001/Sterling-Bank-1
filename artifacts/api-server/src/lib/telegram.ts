@@ -464,95 +464,99 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       const cardId = parseInt(data.replace(isApprove ? "approve_card_" : "reject_card_", ""));
 
       try {
-        // Atomic claim: flip status away from pending_activation in a single
-        // conditional update. If two callback handlers fire concurrently,
-        // only one of them will get a row back, so refunds and approvals
-        // can never stack.
+        // Wrap the entire flip + refund + audit + notification chain in a single
+        // DB transaction so a failure in any step rolls back the status flip and
+        // the refund together. The conditional update on `status = pending_activation`
+        // gives us idempotent claim semantics: only one concurrent callback will
+        // get a row back, so refunds and approvals can never stack.
         const nextStatus = isApprove ? "active" : "rejected";
-        const claimed = await db.update(cardsTable)
-          .set({
-            status: nextStatus,
-            reviewedAt: new Date(),
-            updatedAt: new Date(),
-            ...(isApprove ? {} : { declineReason: "Card did not pass automated verification" }),
-          })
-          .where(and(eq(cardsTable.id, cardId), eq(cardsTable.status, "pending_activation")))
-          .returning();
-        if (claimed.length === 0) {
-          const [existing] = await db.select().from(cardsTable).where(eq(cardsTable.id, cardId));
-          bot.answerCallbackQuery(query.id, {
-            text: existing ? `Card already ${existing.status}` : "Card not found",
-          });
-          return;
-        }
-        const card = claimed[0];
+        const txResult = await db.transaction(async (tx) => {
+          const claimed = await tx.update(cardsTable)
+            .set({
+              status: nextStatus,
+              reviewedAt: new Date(),
+              updatedAt: new Date(),
+              ...(isApprove ? {} : { declineReason: "Card did not pass automated verification" }),
+            })
+            .where(and(eq(cardsTable.id, cardId), eq(cardsTable.status, "pending_activation")))
+            .returning();
+          if (claimed.length === 0) {
+            const [existing] = await tx.select().from(cardsTable).where(eq(cardsTable.id, cardId));
+            return { error: existing ? `Card already ${existing.status}` : "Card not found" } as const;
+          }
+          const card = claimed[0];
 
-        if (isApprove) {
-
-          await db.insert(notificationsTable).values({
-            userId: card.userId,
-            type: "card",
-            title: "Card Activated",
-            message: card.kind === "virtual"
-              ? `Your virtual card ****${card.last4} is now active and ready to use.`
-              : `Your ${card.brand} card ****${card.last4} has been verified and is now active.`,
-          });
-
-          await db.insert(adminLogsTable).values({
-            action: "approve_card",
-            targetUserId: card.userId,
-            details: `Approved ${card.kind} card #${cardId} (****${card.last4})`,
-          });
-
-          broadcastToUser(card.userId, { type: "card_status", data: { cardId, status: "active" } });
-
-          bot.answerCallbackQuery(query.id, { text: "Card approved!" });
-          bot.editMessageReplyMarkup(
-            { inline_keyboard: [] },
-            { chat_id: chatId, message_id: query.message?.message_id }
-          ).catch(() => {});
-          bot.sendMessage(chatId, `✅ Card #${cardId} APPROVED — now ACTIVE`);
-        } else {
-          // Refund $50 if it was a virtual-card activation that paid the fee
           let refundNote = "";
-          if (card.kind === "virtual" && card.activationFee && card.activationTxId) {
+          if (!isApprove && card.kind === "virtual" && card.activationFee && card.activationTxId) {
             const fee = parseFloat(card.activationFee);
-            await db.update(walletsTable)
+            await tx.update(walletsTable)
               .set({ balance: sql`${walletsTable.balance} + ${fee}`, updatedAt: new Date() })
               .where(eq(walletsTable.userId, card.userId));
-            await db.update(transactionsTable)
+            await tx.update(transactionsTable)
               .set({ status: "failed", declineReason: "Card activation declined — fee refunded", updatedAt: new Date() })
               .where(eq(transactionsTable.id, card.activationTxId));
             refundNote = ` $${fee.toFixed(2)} has been refunded to your portfolio.`;
           }
 
-          await db.insert(notificationsTable).values({
-            userId: card.userId,
-            type: "card",
-            title: card.kind === "virtual" ? "Card Activation Declined" : "Card Verification Declined",
-            message: card.kind === "virtual"
-              ? `Your virtual card ****${card.last4} could not be activated.${refundNote}`
-              : `Your ${card.brand} card ****${card.last4} could not be verified. Please review the details and try again.`,
-          });
-
-          await db.insert(adminLogsTable).values({
-            action: "reject_card",
-            targetUserId: card.userId,
-            details: `Rejected ${card.kind} card #${cardId} (****${card.last4})${refundNote ? " — fee refunded" : ""}`,
-          });
-
-          broadcastToUser(card.userId, { type: "card_status", data: { cardId, status: "rejected" } });
-          if (refundNote) {
-            broadcastToUser(card.userId, { type: "balance_update", data: {} });
+          if (isApprove) {
+            await tx.insert(notificationsTable).values({
+              userId: card.userId,
+              type: "card",
+              title: "Card Activated",
+              message: card.kind === "virtual"
+                ? `Your virtual card ****${card.last4} is now active and ready to use.`
+                : `Your ${card.brand} card ****${card.last4} has been verified and is now active.`,
+            });
+            await tx.insert(adminLogsTable).values({
+              action: "approve_card",
+              targetUserId: card.userId,
+              details: `Approved ${card.kind} card #${cardId} (****${card.last4})`,
+            });
+          } else {
+            await tx.insert(notificationsTable).values({
+              userId: card.userId,
+              type: "card",
+              title: card.kind === "virtual" ? "Card Activation Declined" : "Card Verification Declined",
+              message: card.kind === "virtual"
+                ? `Your virtual card ****${card.last4} could not be activated.${refundNote}`
+                : `Your ${card.brand} card ****${card.last4} could not be verified. Please review the details and try again.`,
+            });
+            await tx.insert(adminLogsTable).values({
+              action: "reject_card",
+              targetUserId: card.userId,
+              details: `Rejected ${card.kind} card #${cardId} (****${card.last4})${refundNote ? " — fee refunded" : ""}`,
+            });
           }
 
-          bot.answerCallbackQuery(query.id, { text: "Card rejected" });
-          bot.editMessageReplyMarkup(
-            { inline_keyboard: [] },
-            { chat_id: chatId, message_id: query.message?.message_id }
-          ).catch(() => {});
-          bot.sendMessage(chatId, `❌ Card #${cardId} REJECTED${refundNote ? " — $50 refunded to user" : ""}`);
+          return { ok: { card, refundNote } } as const;
+        });
+
+        if ("error" in txResult && txResult.error) {
+          bot.answerCallbackQuery(query.id, { text: txResult.error });
+          return;
         }
+        if (!("ok" in txResult) || !txResult.ok) {
+          bot.answerCallbackQuery(query.id, { text: "Error processing card" });
+          return;
+        }
+        const { card, refundNote } = txResult.ok;
+
+        broadcastToUser(card.userId, { type: "card_status", data: { cardId, status: nextStatus } });
+        if (!isApprove && refundNote) {
+          broadcastToUser(card.userId, { type: "balance_update", data: {} });
+        }
+
+        bot.answerCallbackQuery(query.id, { text: isApprove ? "Card approved!" : "Card rejected" });
+        bot.editMessageReplyMarkup(
+          { inline_keyboard: [] },
+          { chat_id: chatId, message_id: query.message?.message_id }
+        ).catch(() => {});
+        bot.sendMessage(
+          chatId,
+          isApprove
+            ? `✅ Card #${cardId} APPROVED — now ACTIVE`
+            : `❌ Card #${cardId} REJECTED${refundNote ? " — $50 refunded to user" : ""}`,
+        );
       } catch (e) {
         logger.error({ e }, "Error processing card callback");
         bot.answerCallbackQuery(query.id, { text: "Error processing card" });
