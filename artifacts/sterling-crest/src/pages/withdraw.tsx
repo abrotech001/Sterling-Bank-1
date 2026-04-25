@@ -31,10 +31,10 @@ interface MethodConfig {
 }
 
 const METHODS: MethodConfig[] = [
-  { id: "cashapp", name: "Cash App", description: "Send to a $Cashtag", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.brandfetch.io/idHvuG3-r2/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1668074256268", color: "from-emerald-500 to-green-600", icon: DollarSign },
-  { id: "paypal", name: "PayPal", description: "Send to a PayPal email", feePct: 0.5, feeMin: 1, eta: "Within 1 hour", logo: "https://cdn.brandfetch.io/idV02t6WJs/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1717410272834", color: "from-blue-500 to-blue-700", icon: Send },
-  { id: "venmo", name: "Venmo", description: "Send to a Venmo username", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.brandfetch.io/idmICY1eQp/idAkz2zjsg.svg?c=1bxid64Mup7aczewSAYMX&t=1668515090120", color: "from-sky-500 to-cyan-600", icon: Smartphone },
-  { id: "zelle", name: "Zelle", description: "US bank-to-bank, instant", feePct: 0, feeMin: 0, eta: "Within minutes", logo: "https://cdn.brandfetch.io/idQ_o8aTaO/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1668074256268", color: "from-purple-500 to-fuchsia-600", icon: Send },
+  { id: "cashapp", name: "Cash App", description: "Send to a $Cashtag", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.simpleicons.org/cashapp/00D632", color: "from-emerald-500 to-green-600", icon: DollarSign },
+  { id: "paypal", name: "PayPal", description: "Send to a PayPal email", feePct: 0.5, feeMin: 1, eta: "Within 1 hour", logo: "https://cdn.simpleicons.org/paypal/003087", color: "from-blue-500 to-blue-700", icon: Send },
+  { id: "venmo", name: "Venmo", description: "Send to a Venmo username", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.simpleicons.org/venmo/3D95CE", color: "from-sky-500 to-cyan-600", icon: Smartphone },
+  { id: "zelle", name: "Zelle", description: "US bank-to-bank, instant", feePct: 0, feeMin: 0, eta: "Within minutes", logo: "https://cdn.simpleicons.org/zelle/6D1ED4", color: "from-purple-500 to-fuchsia-600", icon: Send },
   { id: "bank", name: "Bank Transfer", description: "Domestic ACH or Wire / SWIFT", feePct: 0.25, feeMin: 5, eta: "1-3 business days", logo: "", color: "from-indigo-500 to-blue-700", icon: Building2 },
   { id: "crypto", name: "Crypto Withdrawal", description: "Send to BTC, ETH, USDT, SOL, XRP", feePct: 1, feeMin: 2, eta: "Within 30 minutes", logo: "", color: "from-orange-500 to-amber-600", icon: Bitcoin },
 ];

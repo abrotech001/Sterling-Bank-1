@@ -49,6 +49,16 @@ const txIcon = (tx: Tx) => {
   return <ArrowUpRight className="w-4 h-4 text-destructive" />;
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  admin_fund: "Bank Credit",
+  gift_card: "Gift Card",
+  deposit: "Deposit",
+  withdrawal: "Withdrawal",
+  transfer: "Transfer",
+};
+
+const friendlyType = (t: string) => TYPE_LABELS[t] || t.replace(/_/g, " ");
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(true);
@@ -239,12 +249,18 @@ export default function TransactionsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <span className={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${
-                        tx.direction === "incoming" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
+                        tx.status === "pending"
+                          ? "bg-yellow-500/15 text-yellow-500"
+                          : tx.status === "failed" || tx.status === "rejected"
+                          ? "bg-destructive/15 text-destructive"
+                          : tx.direction === "incoming"
+                          ? "bg-primary/15 text-primary"
+                          : "bg-destructive/15 text-destructive"
                       }`}>
-                        {tx.label}
+                        {tx.status === "pending" ? "PENDING" : tx.status === "failed" || tx.status === "rejected" ? tx.status.toUpperCase() : tx.label.toUpperCase()}
                       </span>
-                      <span className="text-xs text-muted-foreground capitalize">
-                        {tx.type.replace("_", " ")}
+                      <span className="text-xs text-muted-foreground">
+                        {friendlyType(tx.type)}
                       </span>
                     </div>
                     <div className="font-medium text-sm truncate mt-0.5">

@@ -238,8 +238,14 @@ export default function DashboardPage() {
                             {tx.counterpartyName || tx.note || (tx.label ?? (dir === "incoming" ? "Received" : "Sent"))}
                           </div>
                           <div className="text-[10px] sm:text-[11px] text-muted-foreground flex items-center gap-1">
-                            <span className={`text-[9px] font-bold uppercase ${dir === "incoming" ? "text-primary" : "text-destructive"}`}>
-                              {tx.label ?? (dir === "incoming" ? "Received" : "Sent")}
+                            <span className={`text-[9px] font-bold uppercase ${
+                              tx.status === "pending" ? "text-yellow-500" :
+                              tx.status === "failed" || tx.status === "rejected" ? "text-destructive" :
+                              dir === "incoming" ? "text-primary" : "text-destructive"
+                            }`}>
+                              {tx.status === "pending" ? "PENDING" :
+                                tx.status === "failed" || tx.status === "rejected" ? tx.status.toUpperCase() :
+                                (tx.label ?? (dir === "incoming" ? "Received" : "Sent"))}
                             </span>
                             <span>•</span>
                             <span>{new Date(tx.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
