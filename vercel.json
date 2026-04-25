@@ -1,13 +1,13 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build",
+  "buildCommand": "pnpm run build && node scripts/migrate-db.js",
   "installCommand": "pnpm install",
   "framework": null,
   "projects": [
     {
       "name": "api-server",
       "src": "artifacts/api-server",
-      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/api-server",
+      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
       "outputDirectory": "artifacts/api-server/dist"
     },
     {
