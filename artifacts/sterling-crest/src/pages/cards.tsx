@@ -128,7 +128,7 @@ export default function CardsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-6">
+      <div className="max-w-6xl mx-auto space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h1 className="text-2xl font-bold">My Cards</h1>
@@ -167,7 +167,7 @@ export default function CardsPage() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-16 bg-card border border-border rounded-2xl"
+            className="text-center py-10 bg-card border border-border rounded-2xl"
           >
             <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-3 opacity-40" />
             <p className="text-muted-foreground">No cards yet. Issue a virtual card or link a bank card.</p>

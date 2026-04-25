@@ -18,7 +18,7 @@ export default function NotificationsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold">Notifications</h1>
@@ -32,7 +32,7 @@ export default function NotificationsPage() {
         </div>
 
         {notifications.length === 0 ? (
-          <div className="text-center py-16 bg-card border border-border rounded-2xl">
+          <div className="text-center py-10 bg-card border border-border rounded-2xl">
             <Bell className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-40" />
             <p className="text-muted-foreground">No notifications yet</p>
           </div>
