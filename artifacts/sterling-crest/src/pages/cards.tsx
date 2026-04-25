@@ -175,7 +175,7 @@ export default function CardsPage() {
 
                       <div className="relative flex justify-between items-start">
                         <div>
-                          <div className="text-xs text-white/60 uppercase tracking-widest mb-0.5">Sterling Crest</div>
+                          <div className="text-xs text-white/60 uppercase tracking-widest mb-0.5">Crestfield</div>
                           <div className="text-xs font-semibold capitalize">{card.cardType} Card</div>
                         </div>
                         <div className="flex items-center gap-2">

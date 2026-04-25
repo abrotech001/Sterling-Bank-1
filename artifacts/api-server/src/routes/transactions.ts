@@ -264,7 +264,7 @@ router.get("/:id/receipt", requireAuth, async (req, res) => {
         createdAt: tx.createdAt,
         updatedAt: tx.updatedAt,
       },
-      bank: "Sterling Crest Bank",
+      bank: "Crestfield Bank",
       generatedAt: new Date(),
     });
   } catch (e) {

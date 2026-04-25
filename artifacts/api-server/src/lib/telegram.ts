@@ -41,7 +41,7 @@ export async function initTelegramBots() {
 
 function setupAdminBotHandlers(bot: TelegramBot) {
   bot.onText(/\/start/, (msg) => {
-    bot.sendMessage(msg.chat.id, "Sterling Crest Bank Admin Bot\n\nCommands:\n/users - List recent users\n/user <id> - User details\n/freeze <id> - Freeze user\n/unfreeze <id> - Unfreeze user\n/setbalance <id> <amount> - Set user balance\n/fund <accountNumber> <amount> <reason> - Fund user\n/logs - Recent admin logs");
+    bot.sendMessage(msg.chat.id, "Crestfield Bank Admin Bot\n\nCommands:\n/users - List recent users\n/user <id> - User details\n/freeze <id> - Freeze user\n/unfreeze <id> - Unfreeze user\n/setbalance <id> <amount> - Set user balance\n/fund <accountNumber> <amount> <reason> - Fund user\n/logs - Recent admin logs");
   });
 
   bot.onText(/\/users/, async (msg): Promise<void> => {

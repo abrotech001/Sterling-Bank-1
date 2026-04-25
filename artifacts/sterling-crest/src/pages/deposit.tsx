@@ -72,7 +72,7 @@ export default function DepositPage() {
       <div className="max-w-xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Deposit Funds</h1>
-          <p className="text-muted-foreground">Add money to your Sterling Crest account</p>
+          <p className="text-muted-foreground">Add money to your Crestfield account</p>
         </div>
 
         <div className="space-y-3">
@@ -103,7 +103,7 @@ export default function DepositPage() {
             <div className="bg-background border border-border rounded-xl p-4 space-y-3">
               <p className="text-sm font-medium flex items-center gap-2"><Info className="w-4 h-4 text-primary" />Wire Transfer Instructions</p>
               {[
-                ["Bank Name", "Sterling Crest Bank"],
+                ["Bank Name", "Crestfield Bank"],
                 ["Account Name", `${user?.firstName} ${user?.lastName}`],
                 ["Account Number", user?.accountNumber ?? ""],
                 ["Routing Number", "026009593"],

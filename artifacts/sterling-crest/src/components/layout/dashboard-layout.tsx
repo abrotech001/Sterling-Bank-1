@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: Props) {
             <Shield className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <div className="font-bold text-sm leading-tight">Sterling Crest</div>
+            <div className="font-bold text-sm leading-tight">Crestfield</div>
             <div className="text-xs text-muted-foreground leading-tight">Private Banking</div>
           </div>
         </div>
@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }: Props) {
           </button>
           <div className="lg:hidden flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            <span className="font-bold text-sm">Sterling Crest</span>
+            <span className="font-bold text-sm">Crestfield</span>
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">

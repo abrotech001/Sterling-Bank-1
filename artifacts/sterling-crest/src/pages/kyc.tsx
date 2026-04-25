@@ -95,7 +95,7 @@ export default function KYCPage() {
             </h2>
             <p className="text-muted-foreground mb-6">
               {kycLevel >= 1
-                ? "Your identity has been verified. You now have full access to all Sterling Crest services."
+                ? "Your identity has been verified. You now have full access to all Crestfield services."
                 : "Your documents are under review. This typically takes 24-48 hours. You'll be notified once approved."}
             </p>
             <div className="flex items-center justify-center gap-2 mb-6">

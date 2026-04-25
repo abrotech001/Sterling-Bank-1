@@ -77,7 +77,7 @@ export default function TransferPage() {
       <div className="max-w-xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Internal Transfer</h1>
-          <p className="text-muted-foreground">Transfer funds to another Sterling Crest account</p>
+          <p className="text-muted-foreground">Transfer funds to another Crestfield account</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6">

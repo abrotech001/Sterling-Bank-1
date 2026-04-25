@@ -54,7 +54,7 @@ export default function LoginPage() {
             <Shield className="w-7 h-7 text-primary" />
           </div>
           <h1 className="text-3xl font-bold">Welcome back</h1>
-          <p className="text-muted-foreground mt-1">Sign in to your Sterling Crest account</p>
+          <p className="text-muted-foreground mt-1">Sign in to your Crestfield account</p>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-8 shadow-2xl">
