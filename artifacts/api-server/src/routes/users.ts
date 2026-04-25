@@ -90,7 +90,8 @@ router.get("/profile", requireAuth, async (req, res) => {
 });
 
 router.post("/set-pin", requireAuth, async (req, res) => {
-  const { pin, confirmPin } = req.body;
+  const { pin, confirmPin, currentPin } = req.body;
+  const user = req.user!;
 
   if (!pin || !confirmPin) {
     res.status(400).json({ error: "PIN and confirmation are required" });
@@ -108,9 +109,21 @@ router.post("/set-pin", requireAuth, async (req, res) => {
   }
 
   try {
+    if (user.pinHash) {
+      if (!currentPin) {
+        res.status(400).json({ error: "Current passcode is required to change your passcode" });
+        return;
+      }
+      const valid = await comparePin(currentPin, user.pinHash);
+      if (!valid) {
+        res.status(401).json({ error: "Current passcode is incorrect" });
+        return;
+      }
+    }
+
     const pinHash = await hashPin(pin);
     await db.update(usersTable).set({ pinHash }).where(eq(usersTable.id, req.userId!));
-    res.json({ success: true, message: "Transaction PIN set successfully" });
+    res.json({ success: true, message: user.pinHash ? "Transaction PIN updated" : "Transaction PIN set successfully" });
   } catch (e) {
     req.log.error({ e }, "Error setting PIN");
     res.status(500).json({ error: "Failed to set PIN" });

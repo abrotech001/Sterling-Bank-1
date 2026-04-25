@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { transactionsTable, usersTable, walletsTable, notificationsTable } from "@workspace/db";
 import { eq, and, or, sql, desc } from "drizzle-orm";
+import { aliasedTable } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth";
 import { comparePin } from "../lib/auth";
 import { sendTransactionAlert, sendGiftCardAlert } from "../lib/telegram";
@@ -11,14 +12,25 @@ const router = Router();
 
 router.get("/", requireAuth, async (req, res) => {
   const userId = req.userId!;
-  const { type, status, limit = "20", offset = "0" } = req.query as Record<string, string>;
+  const { limit = "100", offset = "0" } = req.query as Record<string, string>;
 
   try {
-    let txs = await db.select({
+    const senderAlias = aliasedTable(usersTable, "sender");
+    const receiverAlias = aliasedTable(usersTable, "receiver");
+
+    const rows = await db.select({
       tx: transactionsTable,
-      senderUsername: usersTable.username,
+      senderUsername: senderAlias.username,
+      senderFirstName: senderAlias.firstName,
+      senderLastName: senderAlias.lastName,
+      senderAccount: senderAlias.accountNumber,
+      receiverUsername: receiverAlias.username,
+      receiverFirstName: receiverAlias.firstName,
+      receiverLastName: receiverAlias.lastName,
+      receiverAccount: receiverAlias.accountNumber,
     }).from(transactionsTable)
-      .leftJoin(usersTable, eq(transactionsTable.senderId, usersTable.id))
+      .leftJoin(senderAlias, eq(transactionsTable.senderId, senderAlias.id))
+      .leftJoin(receiverAlias, eq(transactionsTable.receiverId, receiverAlias.id))
       .where(or(eq(transactionsTable.senderId, userId), eq(transactionsTable.receiverId, userId)))
       .orderBy(desc(transactionsTable.createdAt))
       .limit(parseInt(limit))
@@ -28,20 +40,56 @@ router.get("/", requireAuth, async (req, res) => {
       .from(transactionsTable)
       .where(or(eq(transactionsTable.senderId, userId), eq(transactionsTable.receiverId, userId)));
 
-    const transactions = txs.map(({ tx }) => ({
-      id: tx.id,
-      type: tx.type,
-      amount: parseFloat(tx.amount),
-      status: tx.status,
-      note: tx.note,
-      declineReason: tx.declineReason,
-      senderId: tx.senderId,
-      receiverId: tx.receiverId,
-      method: tx.method,
-      destination: tx.destination,
-      createdAt: tx.createdAt,
-      updatedAt: tx.updatedAt,
-    }));
+    const transactions = rows.map((r) => {
+      const tx = r.tx;
+      const isOutgoing =
+        tx.senderId === userId &&
+        tx.type !== "deposit" &&
+        tx.type !== "admin_fund" &&
+        tx.type !== "gift_card";
+      const direction: "incoming" | "outgoing" = isOutgoing ? "outgoing" : "incoming";
+      const label = direction === "outgoing" ? "Sent" : "Received";
+
+      let counterpartyName: string | null = null;
+      let counterpartyAccount: string | null = null;
+      if (tx.type === "transfer") {
+        if (direction === "outgoing") {
+          counterpartyName = [r.receiverFirstName, r.receiverLastName].filter(Boolean).join(" ") || (r.receiverUsername ? `@${r.receiverUsername}` : null);
+          counterpartyAccount = r.receiverAccount;
+        } else {
+          counterpartyName = [r.senderFirstName, r.senderLastName].filter(Boolean).join(" ") || (r.senderUsername ? `@${r.senderUsername}` : null);
+          counterpartyAccount = r.senderAccount;
+        }
+      } else if (tx.type === "admin_fund") {
+        counterpartyName = "Crestfield Bank";
+      } else if (tx.type === "gift_card") {
+        counterpartyName = tx.method ? `${tx.method} Gift Card` : "Gift Card";
+      } else if (tx.type === "deposit") {
+        counterpartyName = tx.method ? `${tx.method.toUpperCase()} Deposit` : "Deposit";
+      } else if (tx.type === "withdrawal") {
+        counterpartyName = tx.bankName || tx.destination || "External Account";
+      }
+
+      return {
+        id: tx.id,
+        type: tx.type,
+        amount: parseFloat(tx.amount),
+        status: tx.status,
+        note: tx.note,
+        description: tx.note,
+        declineReason: tx.declineReason,
+        senderId: tx.senderId,
+        receiverId: tx.receiverId,
+        method: tx.method,
+        destination: tx.destination,
+        direction,
+        label,
+        counterpartyName,
+        counterpartyAccount,
+        createdAt: tx.createdAt,
+        updatedAt: tx.updatedAt,
+      };
+    });
 
     res.json({ transactions, total: parseInt(total[0]?.count.toString() || "0") });
   } catch (e) {
@@ -50,30 +98,89 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/lookup-recipient/:accountNumber", requireAuth, async (req, res) => {
+  const accountNumber = String(req.params.accountNumber ?? "").trim();
+  const userId = req.userId!;
+  if (!accountNumber) {
+    res.status(400).json({ error: "Account number is required" });
+    return;
+  }
+  try {
+    const [recipient] = await db.select({
+      id: usersTable.id,
+      firstName: usersTable.firstName,
+      lastName: usersTable.lastName,
+      username: usersTable.username,
+      accountNumber: usersTable.accountNumber,
+      status: usersTable.status,
+    }).from(usersTable).where(eq(usersTable.accountNumber, accountNumber));
+
+    if (!recipient) {
+      res.status(404).json({ error: "No Crestfield account matches that number" });
+      return;
+    }
+    if (recipient.id === userId) {
+      res.status(400).json({ error: "You cannot transfer to your own account" });
+      return;
+    }
+    if (recipient.status === "frozen") {
+      res.status(400).json({ error: "This account cannot receive transfers right now" });
+      return;
+    }
+    const fullName = [recipient.firstName, recipient.lastName].filter(Boolean).join(" ") || recipient.username;
+    res.json({
+      recipient: {
+        accountNumber: recipient.accountNumber,
+        fullName,
+        username: recipient.username,
+      },
+    });
+  } catch (e) {
+    req.log.error({ e }, "Error looking up recipient");
+    res.status(500).json({ error: "Failed to look up account" });
+  }
+});
+
 router.post("/transfer", requireAuth, async (req, res) => {
-  const { recipientAccountNumber, amount, pin, note } = req.body;
+  const recipientAccountNumber: string | undefined =
+    req.body.recipientAccountNumber || req.body.toAccountNumber;
+  const rawAmount = req.body.amount;
+  const pin: string | undefined = req.body.pin;
+  const note: string | undefined = (req.body.note ?? req.body.description ?? "").toString().trim();
   const userId = req.userId!;
   const user = req.user!;
 
-  if (!recipientAccountNumber || !amount || !pin) {
-    res.status(400).json({ error: "Recipient, amount, and PIN are required" });
+  if (!recipientAccountNumber || rawAmount === undefined || rawAmount === null || rawAmount === "") {
+    res.status(400).json({ error: "Recipient and amount are required" });
     return;
   }
 
-  if (user.kycLevel < 1) {
-    res.status(403).json({ error: "Identity verification required", message: "Please complete KYC verification to send money." });
+  const amountNum = typeof rawAmount === "number" ? rawAmount : parseFloat(String(rawAmount));
+  if (!Number.isFinite(amountNum) || amountNum <= 0) {
+    res.status(400).json({ error: "Amount must be a positive number" });
+    return;
+  }
+  if (amountNum > 1_000_000) {
+    res.status(400).json({ error: "Amount exceeds the per-transfer limit" });
+    return;
+  }
+  const amount = amountNum.toFixed(2);
+
+  if (!note) {
+    res.status(400).json({ error: "A narration / description is required for every transfer" });
     return;
   }
 
-  if (!user.pinHash) {
-    res.status(400).json({ error: "Please set a transaction PIN first" });
-    return;
-  }
-
-  const validPin = await comparePin(pin, user.pinHash);
-  if (!validPin) {
-    res.status(401).json({ error: "Invalid transaction PIN" });
-    return;
+  if (user.pinHash) {
+    if (!pin) {
+      res.status(400).json({ error: "Transaction PIN is required" });
+      return;
+    }
+    const validPin = await comparePin(pin, user.pinHash);
+    if (!validPin) {
+      res.status(401).json({ error: "Invalid transaction PIN" });
+      return;
+    }
   }
 
   try {
@@ -85,6 +192,11 @@ router.post("/transfer", requireAuth, async (req, res) => {
 
     if (recipient.id === userId) {
       res.status(400).json({ error: "Cannot transfer to your own account" });
+      return;
+    }
+
+    if (recipient.status && recipient.status !== "active") {
+      res.status(400).json({ error: "Recipient account is not active" });
       return;
     }
 
