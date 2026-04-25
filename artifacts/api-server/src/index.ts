@@ -1,5 +1,8 @@
-import httpServer from "./app";
+import { createServer } from "http";
+import app from "./app";
 import { logger } from "./lib/logger";
+import { initWebSocket } from "./lib/websocket";
+import { initTelegramBots } from "./lib/telegram";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +17,10 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+const httpServer = createServer(app);
+initWebSocket(httpServer);
+initTelegramBots().catch((e) => logger.error({ e }, "Failed to init Telegram bots"));
 
 httpServer.listen(port, (err?: Error) => {
   if (err) {
