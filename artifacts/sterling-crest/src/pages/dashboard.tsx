@@ -83,7 +83,9 @@ export default function DashboardPage() {
     const unsub = onWSMessage((msg) => {
       if (["transaction_update", "balance_update"].includes(msg.type)) fetchData();
     });
-    return unsub;
+    return () => {
+      unsub?.();
+    };
   }, []);
 
   const balance = wallet ? formatCurrency(wallet.balance) : "$0.00";
