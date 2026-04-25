@@ -1,6 +1,6 @@
 {
   "buildCommand": "pnpm run build",
-  "outputDirectory": "artifacts/nano-ledger-x/dist/public",
+  "outputDirectory": "artifacts/sterling-crest/dist/public",
   "framework": "vite",
   "regions": ["iad1"],
   "rewrites": [
