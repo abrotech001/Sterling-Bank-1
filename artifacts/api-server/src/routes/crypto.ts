@@ -25,6 +25,13 @@ function publicWallet(w: typeof cryptoWalletsTable.$inferSelect) {
     usdtAddress: w.usdtAddress,
     solAddress: w.solAddress,
     xrpAddress: w.xrpAddress,
+    balances: {
+      btc: parseFloat(w.btcBalance || "0"),
+      eth: parseFloat(w.ethBalance || "0"),
+      usdt: parseFloat(w.usdtBalance || "0"),
+      sol: parseFloat(w.solBalance || "0"),
+      xrp: parseFloat(w.xrpBalance || "0"),
+    },
     createdAt: w.createdAt,
   };
 }
@@ -174,6 +181,23 @@ router.post("/swap", requireAuth, async (req, res) => {
       .where(eq(cryptoWalletsTable.userId, userId));
     if (!wallet) {
       res.status(400).json({ error: "Create a crypto wallet first" });
+      return;
+    }
+
+    // Available balance for this asset, minus any in-flight pending swaps
+    const balanceField = `${assetLower}Balance` as keyof typeof wallet;
+    const heldBalance = parseFloat((wallet[balanceField] as string) || "0");
+    const pending = await db
+      .select()
+      .from(cryptoSwapsTable)
+      .where(and(eq(cryptoSwapsTable.userId, userId), eq(cryptoSwapsTable.asset, assetLower), eq(cryptoSwapsTable.status, "pending")));
+    const lockedInPending = pending.reduce((sum, s) => sum + parseFloat(s.amount), 0);
+    const available = heldBalance - lockedInPending;
+
+    if (available < amt) {
+      res.status(400).json({
+        error: `Insufficient ${assetLower.toUpperCase()} balance. Available: ${available.toFixed(8)} ${assetLower.toUpperCase()}.`,
+      });
       return;
     }
 
