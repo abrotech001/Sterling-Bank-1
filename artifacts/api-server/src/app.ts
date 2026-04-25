@@ -17,6 +17,7 @@ import notificationsRouter from "./routes/notifications";
 import supportRouter from "./routes/support";
 import locationRouter from "./routes/location";
 import vaultsRouter from "./routes/vaults";
+import cryptoRouter from "./routes/crypto";
 
 const app: Express = express();
 
@@ -57,6 +58,7 @@ app.use("/api/support", supportRouter);
 app.use("/api/ip-location", locationRouter);
 app.use("/api/location", locationRouter);
 app.use("/api/vaults", vaultsRouter);
+app.use("/api/crypto", cryptoRouter);
 
 const httpServer = createServer(app);
 initWebSocket(httpServer);
