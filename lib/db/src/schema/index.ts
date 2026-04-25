@@ -7,3 +7,4 @@ export * from "./notifications";
 export * from "./support";
 export * from "./admin_logs";
 export * from "./savings_vaults";
+export * from "./crypto";

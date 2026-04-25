@@ -46,17 +46,27 @@ function UserAvatar({
   );
 }
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: ArrowLeftRight, label: "Transfer", path: "/transfer" },
-  { icon: Download, label: "Deposit", path: "/deposit" },
-  { icon: Upload, label: "Withdraw", path: "/withdraw" },
-  { icon: Gift, label: "Gift Cards", path: "/giftcards" },
-  { icon: CreditCard, label: "Cards", path: "/cards" },
-  { icon: FileText, label: "Transactions", path: "/transactions" },
-  { icon: Shield, label: "Tier Verification", path: "/kyc" },
-  { icon: MessageCircle, label: "Live Support", path: "/support" },
-  { icon: Settings, label: "Settings", path: "/settings" },
+const navSections: { title: string; items: { icon: typeof LayoutDashboard; label: string; path: string }[] }[] = [
+  {
+    title: "Banking",
+    items: [
+      { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+      { icon: ArrowLeftRight, label: "Transfer", path: "/transfer" },
+      { icon: Download, label: "Deposit", path: "/deposit" },
+      { icon: Upload, label: "Withdraw", path: "/withdraw" },
+      { icon: Gift, label: "Gift Cards", path: "/giftcards" },
+      { icon: CreditCard, label: "Cards", path: "/cards" },
+      { icon: FileText, label: "Transactions", path: "/transactions" },
+    ],
+  },
+  {
+    title: "Account",
+    items: [
+      { icon: Shield, label: "Tier Verification", path: "/kyc" },
+      { icon: MessageCircle, label: "Live Support", path: "/support" },
+      { icon: Settings, label: "Settings", path: "/settings" },
+    ],
+  },
 ];
 
 interface Props {
@@ -86,31 +96,46 @@ export default function DashboardLayout({ children }: Props) {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto py-4 px-3">
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const active = location === item.path || location.startsWith(item.path + "/");
-            return (
-              <button
-                key={item.path}
-                onClick={() => { navigate(item.path); setMobileOpen(false); }}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-card"
-                )}
-              >
-                <item.icon className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1 text-left">{item.label}</span>
-                {item.label === "Notifications" && unread > 0 && (
-                  <Badge className="h-5 px-1.5 text-xs">{unread}</Badge>
-                )}
-                {active && <ChevronRight className="w-3 h-3 opacity-60" />}
-              </button>
-            );
-          })}
-        </nav>
+      <div className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
+        {navSections.map((section, idx) => (
+          <div key={section.title} className={cn(idx > 0 && "mt-5")}>
+            <div className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+              {section.title}
+            </div>
+            <nav className="space-y-0.5">
+              {section.items.map((item) => {
+                const active = location === item.path || location.startsWith(item.path + "/");
+                return (
+                  <button
+                    key={item.path}
+                    onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                    className={cn(
+                      "group relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 overflow-hidden",
+                      active
+                        ? "text-primary-foreground bg-gradient-to-r from-primary to-primary/80 shadow-lg shadow-primary/20 ring-1 ring-primary/40"
+                        : "text-muted-foreground hover:text-foreground hover:bg-foreground/5 hover:translate-x-0.5"
+                    )}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-r-full bg-primary-foreground/80" />
+                    )}
+                    <item.icon
+                      className={cn(
+                        "w-4 h-4 flex-shrink-0 transition-transform duration-200",
+                        active ? "scale-110" : "group-hover:scale-105"
+                      )}
+                    />
+                    <span className="flex-1 text-left">{item.label}</span>
+                    {item.label === "Notifications" && unread > 0 && (
+                      <Badge className="h-5 px-1.5 text-xs">{unread}</Badge>
+                    )}
+                    {active && <ChevronRight className="w-3 h-3 opacity-80" />}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+        ))}
       </div>
 
       <div className="p-4 border-t border-border">

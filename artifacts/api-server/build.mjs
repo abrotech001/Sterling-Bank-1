@@ -3,7 +3,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
-import { rm } from "node:fs/promises";
+import { rm, copyFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
@@ -120,7 +121,22 @@ globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
   });
 }
 
-buildAll().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function copyAssets() {
+  const distDir = path.resolve(artifactDir, "dist");
+  // tiny-secp256k1 wasm — runtime-loaded next to the bundle
+  const wasmSrc = path.resolve(
+    artifactDir,
+    "../../node_modules/.pnpm/tiny-secp256k1@2.2.4/node_modules/tiny-secp256k1/lib/secp256k1.wasm",
+  );
+  if (existsSync(wasmSrc)) {
+    await mkdir(distDir, { recursive: true });
+    await copyFile(wasmSrc, path.resolve(distDir, "secp256k1.wasm"));
+  }
+}
+
+buildAll()
+  .then(copyAssets)
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
