@@ -1,7 +1,7 @@
 import { WebSocketServer, WebSocket } from "ws";
 import type { Server } from "http";
-import { verifyToken } from "./auth";
-import { logger } from "./logger";
+import { verifyToken } from "./auth.js";
+import { logger } from "./logger.js";
 
 const userConnections = new Map<number, Set<WebSocket>>();
 
