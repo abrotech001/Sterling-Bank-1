@@ -688,7 +688,7 @@ function ReviewCard({
 
       <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-3 flex gap-2 text-xs">
         <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-        <p className="text-muted-foreground">Withdrawals require KYC verification and admin approval. You'll receive a notification once your transfer is processed.</p>
+        <p className="text-muted-foreground">Withdrawals require KYC verification and pass an automated security review. You'll receive a notification once your transfer is processed.</p>
       </div>
     </div>
   );

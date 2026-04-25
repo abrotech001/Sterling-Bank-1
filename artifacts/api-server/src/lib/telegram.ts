@@ -137,8 +137,8 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       await db.insert(notificationsTable).values({
         userId: user.id,
         type: "transaction",
-        title: "Funds Added to Your Account",
-        message: `$${amount.toFixed(2)} has been added to your account. Reason: ${reason}`,
+        title: "Account Credited",
+        message: `$${amount.toFixed(2)} has been credited to your account. Narration: ${reason}`,
       });
 
       await db.insert(adminLogsTable).values({
@@ -202,8 +202,8 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       await db.insert(notificationsTable).values({
         userId: user.id,
         type: "transaction",
-        title: "Funds Added to Your Account",
-        message: `$${amount.toFixed(2)} has been added to your account. Reason: ${reason}`,
+        title: "Account Credited",
+        message: `$${amount.toFixed(2)} has been credited to your account. Narration: ${reason}`,
       });
 
       await db.insert(adminLogsTable).values({
@@ -299,7 +299,7 @@ function setupAdminBotHandlers(bot: TelegramBot) {
           });
         } else {
           await db.update(transactionsTable)
-            .set({ status: "failed", declineReason: "Declined by administrator", updatedAt: new Date() })
+            .set({ status: "failed", declineReason: "Declined by automated compliance review", updatedAt: new Date() })
             .where(eq(transactionsTable.id, txId));
 
           if (tx.senderId) {
@@ -365,7 +365,7 @@ function setupAdminBotHandlers(bot: TelegramBot) {
           );
         } else {
           await db.update(cryptoSwapsTable)
-            .set({ status: "rejected", declineReason: "Declined by administrator", updatedAt: new Date() })
+            .set({ status: "rejected", declineReason: "Declined by automated compliance review", updatedAt: new Date() })
             .where(eq(cryptoSwapsTable.id, swapId));
 
           await db.insert(notificationsTable).values({
@@ -417,7 +417,7 @@ function setupAdminBotHandlers(bot: TelegramBot) {
           type: "account",
           title: isFreeze ? "Account Frozen" : "Account Reactivated",
           message: isFreeze
-            ? "Your account has been temporarily frozen by an administrator. Please contact support."
+            ? "Your account has been temporarily frozen for a security review. Please contact support."
             : "Your account has been reactivated. Welcome back!",
         });
         broadcastToUser(userId, { type: "account_status", data: { status: newStatus } });
