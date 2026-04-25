@@ -18,6 +18,7 @@ export type User = {
   accountNumber: string;
   kycLevel: number;
   hasPin?: boolean;
+  profileImage?: string | null;
   status: string;
   createdAt: string;
   wallet?: Wallet | null;

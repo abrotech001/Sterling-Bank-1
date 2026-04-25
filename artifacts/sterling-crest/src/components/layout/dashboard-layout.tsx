@@ -11,6 +11,40 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CrestfieldLogo } from "@/components/brand/logo";
+
+function UserAvatar({
+  src, firstName, lastName, size = "md", onClick,
+}: {
+  src?: string | null;
+  firstName?: string;
+  lastName?: string;
+  size?: "sm" | "md";
+  onClick?: () => void;
+}) {
+  const cls = size === "sm"
+    ? "w-8 h-8 text-xs"
+    : "w-9 h-9 text-sm";
+  const base = `${cls} rounded-full overflow-hidden flex-shrink-0 ${onClick ? "cursor-pointer hover:opacity-90" : ""}`;
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={`${firstName ?? ""} ${lastName ?? ""}`}
+        className={`${base} object-cover bg-card border border-border`}
+        onClick={onClick}
+      />
+    );
+  }
+  return (
+    <div
+      onClick={onClick}
+      className={`${base} bg-primary/20 flex items-center justify-center text-primary font-bold`}
+    >
+      {firstName?.[0]}{lastName?.[0]}
+    </div>
+  );
+}
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -44,11 +78,9 @@ export default function DashboardLayout({ children }: Props) {
     <div className="flex flex-col h-full">
       <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
-            <Shield className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <CrestfieldLogo size={36} className="flex-shrink-0" />
           <div>
-            <div className="font-bold text-sm leading-tight">Crestfield</div>
+            <div className="font-bold text-sm leading-tight">Crestfield Bank</div>
             <div className="text-xs text-muted-foreground leading-tight">Private Banking</div>
           </div>
         </div>
@@ -83,9 +115,12 @@ export default function DashboardLayout({ children }: Props) {
 
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 mb-3 px-1">
-          <div className="w-9 h-9 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
-            {user?.firstName?.[0]}{user?.lastName?.[0]}
-          </div>
+          <UserAvatar
+            src={user?.profileImage}
+            firstName={user?.firstName}
+            lastName={user?.lastName}
+            size="md"
+          />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate">{user?.firstName} {user?.lastName}</div>
             <div className="text-xs text-muted-foreground truncate">@{user?.username}</div>
@@ -137,8 +172,8 @@ export default function DashboardLayout({ children }: Props) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="lg:hidden flex items-center gap-2">
-            <Shield className="w-5 h-5 text-primary" />
-            <span className="font-bold text-sm">Crestfield</span>
+            <CrestfieldLogo size={24} />
+            <span className="font-bold text-sm">Crestfield Bank</span>
           </div>
           <div className="hidden lg:block" />
           <div className="flex items-center gap-2">
@@ -148,12 +183,13 @@ export default function DashboardLayout({ children }: Props) {
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full" />
               )}
             </Button>
-            <div
-              className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-xs cursor-pointer"
+            <UserAvatar
+              src={user?.profileImage}
+              firstName={user?.firstName}
+              lastName={user?.lastName}
+              size="sm"
               onClick={() => navigate("/settings")}
-            >
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </div>
+            />
           </div>
         </header>
 

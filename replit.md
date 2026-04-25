@@ -48,5 +48,11 @@ A 4–6 digit passcode required for sensitive actions. Backed by `users.pin_hash
 ### KYC / Tier Naming
 KYC levels are surfaced to the user as **Tier 1 / Tier 2 / Tier 3** (level 0/1/2 internally). Sidebar label: "Tier Verification".
 
+### Branding & Profile Photos
+- Brand logo: `artifacts/sterling-crest/public/logo.png`. React component `<CrestfieldLogo size={n} />` at `artifacts/sterling-crest/src/components/brand/logo.tsx` renders the image with a gradient fallback. Used in landing nav/footer, login, register, dashboard sidebar.
+- Email branding: `artifacts/api-server/src/lib/brand.ts` exports `LOGO_DATA_URL` (base64 JPEG). `wrapEmail()`/`emailHeader()`/`emailFooter()` in `artifacts/api-server/src/lib/email.ts` add the logo to all system emails (OTP + welcome). Plain-text fallback bodies remain intact.
+- Profile photos: stored as base64 data URLs in `users.profile_image` (text column). Endpoints `POST /api/users/me/avatar` (body `{ image }`, JPG/PNG only, ≤ 5MB after decode) and `DELETE /api/users/me/avatar`. Settings page resizes uploads client-side to 512px max via canvas before submit. Avatar shown in 3 places via `<UserAvatar>` helper: settings card, sidebar user section, and top-right header — falls back to initials if no image.
+- Landing legal: footer Privacy / Terms / Security buttons open shadcn Dialog modals containing multi-section policy content (defined inline in `artifacts/sterling-crest/src/pages/landing.tsx` as `LEGAL_CONTENT`).
+
 ### Gift Card Submissions
 `POST /giftcards/redeem` body `{ cardType, cardNumber, declaredValue, pin?, frontImage, backImage }`. Both front and back images required. Plaintext PIN is **not** stored in the user-facing transaction note; it is only forwarded to the admin Telegram alert (admin needs it to redeem the card).

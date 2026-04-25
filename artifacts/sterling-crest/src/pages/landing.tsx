@@ -1,7 +1,16 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Shield, Zap, Globe, TrendingUp, Lock, CreditCard, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Shield, Zap, Globe, TrendingUp, Lock, CreditCard, ArrowRight, CheckCircle2, X, FileText, ShieldCheck } from "lucide-react";
+import { CrestfieldLogo } from "@/components/brand/logo";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 const features = [
   { icon: Shield, title: "Bank-Grade Security", desc: "256-bit encryption and multi-factor authentication on every transaction." },
@@ -19,23 +28,111 @@ const stats = [
   { value: "140+", label: "Countries Served" },
 ];
 
-const fadeUp = {
+const fadeUp: Variants = {
   hidden: { opacity: 0, y: 40 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" } }),
+  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.6, ease: "easeOut" as const } }),
+};
+
+type LegalKey = "privacy" | "terms" | "security";
+
+const LEGAL_CONTENT: Record<LegalKey, { title: string; icon: typeof Shield; sections: { heading: string; body: string }[] }> = {
+  privacy: {
+    title: "Privacy Policy",
+    icon: Lock,
+    sections: [
+      {
+        heading: "Information we collect",
+        body: "When you open and use a Crestfield Bank account, we collect the information needed to provide our services securely. This includes your account details (name, contact information, identity verification), transaction history (transfers, deposits, withdrawals, card activity), and basic device and session information (device type, IP address, browser, location signals) used to keep your account safe.",
+      },
+      {
+        heading: "How we use your data",
+        body: "We use your information to process transactions, verify your identity, prevent fraud, and improve the experience of every Crestfield product you rely on. We may also use aggregated, non-identifying data to enhance reliability and develop new features that benefit our customers.",
+      },
+      {
+        heading: "How we protect your data",
+        body: "All sensitive information is encrypted in transit and at rest using industry-grade encryption. Access is strictly limited to authorised personnel and is monitored continuously. Our infrastructure is hosted in secure facilities and audited against modern banking and data-protection standards.",
+      },
+      {
+        heading: "We never sell your data",
+        body: "Crestfield Bank does not sell, rent, or trade your personal data to third parties for marketing purposes. We only share information with trusted service providers and regulators when strictly required to operate your account or comply with the law.",
+      },
+      {
+        heading: "Your control",
+        body: "You can review and update your profile, request a copy of your data, or close your account at any time from your settings. Contact our support team if you need help managing your privacy preferences.",
+      },
+    ],
+  },
+  terms: {
+    title: "Terms & Conditions",
+    icon: FileText,
+    sections: [
+      {
+        heading: "Acceptance of terms",
+        body: "By creating or using a Crestfield Bank account, you agree to use our platform responsibly, lawfully, and for legitimate financial activity. These terms govern your use of all Crestfield products and services.",
+      },
+      {
+        heading: "Eligibility",
+        body: "You must be at least 18 years old, complete identity verification, and provide accurate, up-to-date information. Accounts that fail verification or are flagged as fraudulent may be restricted or closed.",
+      },
+      {
+        heading: "Account security",
+        body: "You are responsible for keeping your password, transaction passcode, and one-time codes confidential at all times. Crestfield staff will never ask for these. Any activity performed using your credentials is considered authorised by you.",
+      },
+      {
+        heading: "Suspicious activity",
+        body: "Crestfield Bank reserves the right to pause, restrict, or close any account that shows signs of fraud, abuse, money laundering, or violations of applicable law. We may also request additional verification when needed.",
+      },
+      {
+        heading: "Transaction rules",
+        body: "Transfers, deposits, withdrawals, and card payments are subject to processing times, daily limits, and verification requirements. Certain regions, currencies, or recipients may be restricted in line with regulatory requirements.",
+      },
+      {
+        heading: "Updates to these terms",
+        body: "We may update these terms from time to time to reflect product changes, security improvements, or new regulations. Continued use of your account after changes are published means you accept the updated terms.",
+      },
+    ],
+  },
+  security: {
+    title: "Security Information",
+    icon: ShieldCheck,
+    sections: [
+      {
+        heading: "End-to-end transaction protection",
+        body: "Every transaction on Crestfield Bank is encrypted from your device to our servers. Card numbers, account details, and personal data are protected with strong cryptography to keep your money and information safe.",
+      },
+      {
+        heading: "Multi-factor authentication",
+        body: "Sensitive actions are protected by additional layers of security, including email verification, one-time passcodes (OTP), and your private transaction passcode. This ensures that only you can authorise activity on your account.",
+      },
+      {
+        heading: "24/7 fraud detection",
+        body: "Our automated risk engine continuously monitors transactions for unusual behaviour, suspicious logins, and high-risk patterns. When something looks wrong, we may temporarily pause activity and ask you to confirm it was you.",
+      },
+      {
+        heading: "Secure infrastructure",
+        body: "Crestfield Bank runs on secure, monitored infrastructure with strict access controls, intrusion detection, and routine security testing. Backups and recovery systems keep your data safe even in unexpected events.",
+      },
+      {
+        heading: "How you can stay safe",
+        body: "Never share your password, OTP, or transaction passcode with anyone — not even Crestfield staff. Always check that you're on the official Crestfield Bank website, ignore suspicious links, and contact support immediately if you notice anything unusual on your account.",
+      },
+    ],
+  },
 };
 
 export default function LandingPage() {
   const [, navigate] = useLocation();
+  const [openLegal, setOpenLegal] = useState<LegalKey | null>(null);
+  const legal = openLegal ? LEGAL_CONTENT[openLegal] : null;
+  const LegalIcon = legal?.icon;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
       <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Shield className="w-4 h-4 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">Crestfield</span>
+            <CrestfieldLogo size={32} />
+            <span className="text-lg font-bold tracking-tight">Crestfield Bank</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -206,21 +303,46 @@ export default function LandingPage() {
       <footer className="border-t border-border py-8">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
-              <Shield className="w-3 h-3 text-primary-foreground" />
-            </div>
+            <CrestfieldLogo size={24} />
             <span className="font-semibold text-sm">Crestfield Bank</span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
             © 2025 Crestfield Bank. Member FDIC. Equal Housing Lender.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground">Privacy</a>
-            <a href="#" className="hover:text-foreground">Terms</a>
-            <a href="#" className="hover:text-foreground">Security</a>
+            <button onClick={() => setOpenLegal("privacy")} className="hover:text-foreground transition-colors">Privacy</button>
+            <button onClick={() => setOpenLegal("terms")} className="hover:text-foreground transition-colors">Terms</button>
+            <button onClick={() => setOpenLegal("security")} className="hover:text-foreground transition-colors">Security</button>
           </div>
         </div>
       </footer>
+
+      <Dialog open={openLegal !== null} onOpenChange={(open) => !open && setOpenLegal(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              {LegalIcon && <LegalIcon className="w-5 h-5 text-primary" />}
+              {legal?.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Last updated: {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            {legal?.sections.map((s, i) => (
+              <div key={i}>
+                <h4 className="font-semibold text-sm mb-1.5">{s.heading}</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+              </div>
+            ))}
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                Have questions? Reach out to <span className="text-foreground font-medium">support@crestfieldbank.com</span> at any time.
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
