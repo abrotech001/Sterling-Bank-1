@@ -155,6 +155,48 @@ function setupAdminBotHandlers(bot: TelegramBot) {
     }
   });
 
+  bot.onText(/\/credit_crypto (\S+) (btc|eth|usdt|sol|xrp) ([\d.]+)/i, async (msg, match): Promise<void> => {
+    if (msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
+    const username = match![1].trim().replace(/^@/, "");
+    const asset = match![2].toLowerCase();
+    const amount = parseFloat(match![3]);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      bot.sendMessage(msg.chat.id, "Invalid amount");
+      return;
+    }
+    try {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.username, username));
+      if (!user) { bot.sendMessage(msg.chat.id, "User not found"); return; }
+
+      const balanceCol = `${asset}_balance`;
+      const result = await db.execute(
+        sql.raw(`UPDATE crypto_wallets SET ${balanceCol} = ${balanceCol} + ${amount} WHERE user_id = ${user.id} RETURNING ${balanceCol}`)
+      );
+      if (!result.rows || result.rows.length === 0) {
+        bot.sendMessage(msg.chat.id, `${user.username} has no crypto wallet yet`);
+        return;
+      }
+
+      await db.insert(notificationsTable).values({
+        userId: user.id,
+        type: "transaction",
+        title: "Crypto Deposit Confirmed",
+        message: `${amount} ${asset.toUpperCase()} has been credited to your crypto wallet.`,
+      });
+      await db.insert(adminLogsTable).values({
+        action: "credit_crypto",
+        targetUserId: user.id,
+        details: `Credited ${amount} ${asset.toUpperCase()} to ${user.username}`,
+      });
+      broadcastToUser(user.id, { type: "balance_update", data: { asset } });
+
+      bot.sendMessage(msg.chat.id, `Credited ${amount} ${asset.toUpperCase()} to @${user.username}`);
+    } catch (e) {
+      logger.error({ e }, "Error crediting crypto");
+      bot.sendMessage(msg.chat.id, "Error crediting crypto balance");
+    }
+  });
+
   bot.on("message", async (msg) => {
     if (msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
     if (!msg.text || msg.text.startsWith("/")) return;
@@ -338,21 +380,32 @@ function setupAdminBotHandlers(bot: TelegramBot) {
       const swapId = parseInt(data.replace(isApprove ? "approve_swap_" : "reject_swap_", ""));
 
       try {
-        const [swap] = await db.select().from(cryptoSwapsTable).where(eq(cryptoSwapsTable.id, swapId));
-        if (!swap) {
-          bot.answerCallbackQuery(query.id, { text: "Swap not found" });
+        // Atomic claim: flip the pending status in a single conditional update so
+        // concurrent callbacks can never double-credit a swap.
+        const nextStatus = isApprove ? "approved" : "rejected";
+        const claimedSwap = await db.update(cryptoSwapsTable)
+          .set({
+            status: nextStatus,
+            updatedAt: new Date(),
+            ...(isApprove ? {} : { declineReason: "Declined by automated compliance review" }),
+          })
+          .where(and(eq(cryptoSwapsTable.id, swapId), eq(cryptoSwapsTable.status, "pending")))
+          .returning();
+        if (claimedSwap.length === 0) {
+          const [existing] = await db.select().from(cryptoSwapsTable).where(eq(cryptoSwapsTable.id, swapId));
+          bot.answerCallbackQuery(query.id, {
+            text: existing ? "Swap already processed" : "Swap not found",
+          });
           return;
         }
-        if (swap.status !== "pending") {
-          bot.answerCallbackQuery(query.id, { text: "Swap already processed" });
-          return;
-        }
+        const swap = claimedSwap[0];
 
         if (isApprove) {
-          await db.update(cryptoSwapsTable)
-            .set({ status: "approved", updatedAt: new Date() })
-            .where(eq(cryptoSwapsTable.id, swapId));
-
+          // Deduct from the user's per-asset crypto balance, then credit USD.
+          const balanceCol = `${swap.asset}_balance`;
+          await db.execute(
+            sql.raw(`UPDATE crypto_wallets SET ${balanceCol} = ${balanceCol} - ${parseFloat(swap.amount)} WHERE user_id = ${swap.userId}`)
+          );
           await db.update(walletsTable)
             .set({ balance: sql`${walletsTable.balance} + ${swap.cashValue}`, updatedAt: new Date() })
             .where(eq(walletsTable.userId, swap.userId));

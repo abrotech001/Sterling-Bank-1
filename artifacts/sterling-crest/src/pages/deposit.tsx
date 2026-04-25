@@ -22,8 +22,37 @@ type CryptoWallet = {
   usdtAddress: string;
   solAddress: string;
   xrpAddress: string;
+  balances: {
+    btc: number;
+    eth: number;
+    usdt: number;
+    sol: number;
+    xrp: number;
+  };
   createdAt: string;
 };
+
+const SOLANA_LOGO_SVG = (
+  <svg viewBox="0 0 397.7 311.7" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+    <defs>
+      <linearGradient id="sol-grad-1" x1="360.879" y1="351.455" x2="141.213" y2="-69.294" gradientTransform="matrix(1 0 0 -1 0 314)" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#00ffa3" />
+        <stop offset="1" stopColor="#dc1fff" />
+      </linearGradient>
+      <linearGradient id="sol-grad-2" x1="264.829" y1="401.601" x2="45.163" y2="-19.148" gradientTransform="matrix(1 0 0 -1 0 314)" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#00ffa3" />
+        <stop offset="1" stopColor="#dc1fff" />
+      </linearGradient>
+      <linearGradient id="sol-grad-3" x1="312.548" y1="376.688" x2="92.882" y2="-44.061" gradientTransform="matrix(1 0 0 -1 0 314)" gradientUnits="userSpaceOnUse">
+        <stop offset="0" stopColor="#00ffa3" />
+        <stop offset="1" stopColor="#dc1fff" />
+      </linearGradient>
+    </defs>
+    <path fill="url(#sol-grad-1)" d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" />
+    <path fill="url(#sol-grad-2)" d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" />
+    <path fill="url(#sol-grad-3)" d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.6z" />
+  </svg>
+);
 
 type CryptoSwap = {
   id: number;
@@ -41,7 +70,7 @@ const CRYPTO_ASSETS = [
   { id: "btc", name: "Bitcoin", symbol: "BTC", color: "from-orange-500 to-yellow-500", textColor: "text-orange-400", network: "Bitcoin (BTC)", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/btc.svg" },
   { id: "eth", name: "Ethereum", symbol: "ETH", color: "from-indigo-500 to-purple-500", textColor: "text-indigo-400", network: "ERC-20", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/eth.svg" },
   { id: "usdt", name: "Tether USD", symbol: "USDT", color: "from-emerald-500 to-teal-500", textColor: "text-emerald-400", network: "ERC-20", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/usdt.svg" },
-  { id: "sol", name: "Solana", symbol: "SOL", color: "from-fuchsia-500 to-purple-500", textColor: "text-fuchsia-400", network: "Solana (SOL)", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/sol.svg" },
+  { id: "sol", name: "Solana", symbol: "SOL", color: "from-fuchsia-500 to-purple-500", textColor: "text-fuchsia-400", network: "Solana (SOL)", logo: "" },
   { id: "xrp", name: "XRP", symbol: "XRP", color: "from-sky-500 to-blue-500", textColor: "text-sky-400", network: "XRP Ledger", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/xrp.svg" },
 ];
 
@@ -119,10 +148,12 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
   const portfolio = useMemo(() => {
     return CRYPTO_ASSETS.map((a) => {
       const pendingAmt = swaps.filter((s) => s.asset === a.id && s.status === "pending").reduce((sum, s) => sum + s.amount, 0);
+      const balance = wallet?.balances?.[a.id as keyof CryptoWallet["balances"]] ?? 0;
       return {
         ...a,
         address: wallet ? (wallet[`${a.id}Address` as keyof CryptoWallet] as string) : "",
-        balance: 0,
+        balance,
+        available: Math.max(0, balance - pendingAmt),
         pendingAmt,
         rate: rates[a.id] || 0,
       };
@@ -154,7 +185,9 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
         <div className="grid grid-cols-5 gap-2">
           {CRYPTO_ASSETS.map((a) => (
             <div key={a.id} className="p-3 rounded-xl bg-background border border-border text-center flex flex-col items-center gap-1.5">
-              <img src={a.logo} alt={a.symbol} className="w-8 h-8" loading="lazy" />
+              <div className="w-8 h-8 flex items-center justify-center">
+                {a.id === "sol" ? SOLANA_LOGO_SVG : <img src={a.logo} alt={a.symbol} className="w-8 h-8" loading="lazy" />}
+              </div>
               <div className="font-bold text-[11px]">{a.symbol}</div>
             </div>
           ))}
@@ -318,8 +351,8 @@ function CryptoCard({
     <div className="bg-card border border-border rounded-2xl p-4 space-y-3" data-testid={`card-asset-${asset.id}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center">
-            <img src={asset.logo} alt={asset.symbol} className="w-7 h-7" loading="lazy" />
+          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center p-1">
+            {asset.id === "sol" ? SOLANA_LOGO_SVG : <img src={asset.logo} alt={asset.symbol} className="w-7 h-7" loading="lazy" />}
           </div>
           <div>
             <div className="font-semibold text-sm">{asset.name}</div>
@@ -382,7 +415,7 @@ function ReceiveModal({
 function SwapModal({
   assets, onClose, onDone, toast,
 }: {
-  assets: ({ id: string; symbol: string; rate: number; balance: number } & typeof CRYPTO_ASSETS[number])[];
+  assets: ({ id: string; symbol: string; rate: number; balance: number; available: number; pendingAmt: number } & typeof CRYPTO_ASSETS[number])[];
   onClose: () => void;
   onDone: () => void;
   toast: ReturnType<typeof useToast>["toast"];
@@ -395,10 +428,20 @@ function SwapModal({
   const sel = assets.find((a) => a.id === asset)!;
   const amt = parseFloat(amount) || 0;
   const cash = amt * sel.rate;
+  const insufficient = amt > sel.available;
+  const noBalance = sel.available <= 0;
 
   const submit = async () => {
     if (amt <= 0) {
       toast({ title: "Enter an amount", variant: "destructive" });
+      return;
+    }
+    if (insufficient) {
+      toast({
+        title: "Insufficient balance",
+        description: `You only have ${sel.available.toFixed(8)} ${sel.symbol} available to swap.`,
+        variant: "destructive",
+      });
       return;
     }
     if (user?.hasPin && (!pin || pin.length < 4)) {
@@ -430,7 +473,7 @@ function SwapModal({
           {assets.map((a) => (
             <button
               key={a.id}
-              onClick={() => setAsset(a.id)}
+              onClick={() => { setAsset(a.id); setAmount(""); }}
               className={`p-2 rounded-lg text-xs font-bold transition-all ${
                 asset === a.id ? `bg-gradient-to-br ${a.color} text-white` : "bg-background border border-border text-muted-foreground hover:text-foreground"
               }`}
@@ -442,7 +485,18 @@ function SwapModal({
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label>Amount in {sel.symbol}</Label>
+        <div className="flex items-center justify-between">
+          <Label>Amount in {sel.symbol}</Label>
+          <button
+            type="button"
+            onClick={() => setAmount(sel.available > 0 ? sel.available.toString() : "")}
+            className="text-[11px] font-medium text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+            disabled={noBalance}
+            data-testid="button-swap-max"
+          >
+            Max
+          </button>
+        </div>
         <Input
           type="number"
           step="0.00000001"
@@ -450,9 +504,34 @@ function SwapModal({
           placeholder="0.00"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
-          className="h-11"
+          className={`h-11 transition-colors duration-150 ${
+            amt > 0 && insufficient ? "border-destructive/60 focus-visible:ring-destructive/40" : ""
+          }`}
           data-testid="input-swap-amount"
         />
+        <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[11px]">
+          <span className="text-muted-foreground" data-testid="text-swap-available">
+            Available: <span className="font-mono font-medium text-foreground">{sel.available.toFixed(8)} {sel.symbol}</span>
+          </span>
+          {sel.pendingAmt > 0 && (
+            <span className="text-yellow-500">{sel.pendingAmt} {sel.symbol} in pending swaps</span>
+          )}
+        </div>
+        <AnimatePresence initial={false}>
+          {amt > 0 && insufficient && (
+            <motion.p
+              key="swap-insufficient"
+              initial={{ opacity: 0, y: -2 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -2 }}
+              transition={{ duration: 0.12, ease: "easeOut" }}
+              className="text-[11px] text-destructive/90"
+              data-testid="text-swap-insufficient"
+            >
+              Amount exceeds your available balance.
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
       <div className="bg-background border border-border rounded-xl p-3 text-sm">
         <div className="flex justify-between text-muted-foreground"><span>Rate</span><span>${sel.rate.toLocaleString()} / {sel.symbol}</span></div>
@@ -464,8 +543,19 @@ function SwapModal({
           <Input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))} className="h-11 tracking-widest text-center" data-testid="input-swap-pin" />
         </div>
       )}
-      <Button className="w-full h-11" disabled={submitting || amt <= 0} onClick={submit} data-testid="button-confirm-swap">
-        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : `Swap to ${formatCurrency(cash)}`}
+      <Button
+        className="w-full h-11"
+        disabled={submitting || amt <= 0 || insufficient || noBalance}
+        onClick={submit}
+        data-testid="button-confirm-swap"
+      >
+        {submitting
+          ? <Loader2 className="w-4 h-4 animate-spin" />
+          : amt > 0 && insufficient
+            ? "Insufficient balance"
+            : noBalance
+              ? `No ${sel.symbol} balance`
+              : `Swap to ${formatCurrency(cash)}`}
       </Button>
     </ModalShell>
   );

@@ -10,6 +10,11 @@ export const cryptoWalletsTable = pgTable("crypto_wallets", {
   usdtAddress: text("usdt_address").notNull(),
   solAddress: text("sol_address").notNull(),
   xrpAddress: text("xrp_address").notNull(),
+  btcBalance: numeric("btc_balance", { precision: 24, scale: 8 }).notNull().default("0"),
+  ethBalance: numeric("eth_balance", { precision: 24, scale: 8 }).notNull().default("0"),
+  usdtBalance: numeric("usdt_balance", { precision: 24, scale: 8 }).notNull().default("0"),
+  solBalance: numeric("sol_balance", { precision: 24, scale: 8 }).notNull().default("0"),
+  xrpBalance: numeric("xrp_balance", { precision: 24, scale: 8 }).notNull().default("0"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
