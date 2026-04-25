@@ -1,26 +1,8 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build && node scripts/migrate-db.js",
+  "buildCommand": "pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
   "installCommand": "pnpm install",
   "framework": null,
-  "projects": [
-    {
-      "name": "api-server",
-      "src": "artifacts/api-server",
-      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
-      "outputDirectory": "artifacts/api-server/dist"
-    },
-    {
-      "name": "sterling-crest",
-      "src": "artifacts/sterling-crest",
-      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/sterling-crest",
-      "outputDirectory": "artifacts/sterling-crest/dist"
-    },
-    {
-      "name": "mockup-sandbox",
-      "src": "artifacts/mockup-sandbox",
-      "buildCommand": "cd ../.. && pnpm run build --filter @workspace/mockup-sandbox",
-      "outputDirectory": "artifacts/mockup-sandbox/dist"
-    }
-  ]
+  "outputDirectory": "artifacts/api-server/dist",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- artifacts/api-server"
 }
