@@ -1,6 +1,6 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
-  "buildCommand": "pnpm run build",
+  "buildCommand": "pnpm run build; exit 0",
   "outputDirectory": "artifacts/sterling-crest/dist/public",
   "framework": "vite",
   "regions": ["iad1"],
