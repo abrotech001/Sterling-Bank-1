@@ -107,8 +107,8 @@ checkFile(
   path.join(projectRoot, "lib/db/src/schema/index.ts"),
 );
 
-// Check workspace configuration
-checkJsonFile(
+// Check workspace configuration (YAML file, just check existence)
+checkFile(
   "pnpm-workspace.yaml",
   path.join(projectRoot, "pnpm-workspace.yaml"),
 );
