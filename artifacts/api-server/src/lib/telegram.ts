@@ -1,15 +1,9 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "@workspace/db";
 import {
-  transactionsTable,
-  usersTable,
-  walletsTable,
-  kycTable,
-  notificationsTable,
-  adminLogsTable,
-  cryptoSwapsTable,
-  cardsTable,
-  supportMessagesTable,
+  transactionsTable, usersTable, walletsTable, kycTable,
+  notificationsTable, adminLogsTable, cryptoSwapsTable,
+  cardsTable, supportMessagesTable,
 } from "@workspace/db";
 import { eq, sql, and } from "drizzle-orm";
 import { logger } from "./logger.js";
