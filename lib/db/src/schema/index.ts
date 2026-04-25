@@ -6,3 +6,4 @@ export * from "./cards";
 export * from "./notifications";
 export * from "./support";
 export * from "./admin_logs";
+export * from "./savings_vaults";
