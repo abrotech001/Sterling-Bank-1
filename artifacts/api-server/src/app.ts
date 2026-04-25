@@ -16,6 +16,7 @@ import giftcardsRouter from "./routes/giftcards";
 import notificationsRouter from "./routes/notifications";
 import supportRouter from "./routes/support";
 import locationRouter from "./routes/location";
+import vaultsRouter from "./routes/vaults";
 
 const app: Express = express();
 
@@ -55,6 +56,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/support", supportRouter);
 app.use("/api/ip-location", locationRouter);
 app.use("/api/location", locationRouter);
+app.use("/api/vaults", vaultsRouter);
 
 const httpServer = createServer(app);
 initWebSocket(httpServer);

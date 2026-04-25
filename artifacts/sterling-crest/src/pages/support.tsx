@@ -39,6 +39,17 @@ export default function SupportPage() {
   const [endingSession, setEndingSession] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefill = params.get("prefill");
+    if (prefill) {
+      setInput(prefill);
+      const url = new URL(window.location.href);
+      url.searchParams.delete("prefill");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
   const endSession = async () => {
     setEndingSession(true);
     try {
