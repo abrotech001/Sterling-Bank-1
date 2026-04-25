@@ -78,7 +78,9 @@ export default function SupportPage() {
     const unsub = onWSMessage((msg) => {
       if (msg.type === "support_message") fetchMessages();
     });
-    return unsub;
+    return () => {
+      unsub?.();
+    };
   }, []);
 
   useEffect(() => {

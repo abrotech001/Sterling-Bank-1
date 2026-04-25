@@ -44,7 +44,9 @@ export function useNotifications() {
         fetchNotifications();
       }
     });
-    return unsub;
+    return () => {
+      unsub?.();
+    };
   }, []);
 
   return { notifications, unread, markRead, refresh: fetchNotifications };
