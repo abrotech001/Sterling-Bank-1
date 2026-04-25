@@ -11,15 +11,19 @@
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
   },
+  "peerDependencies": {
+    "drizzle-orm": "*",
+    "zod": "*"
+  },
   "dependencies": {
-    "drizzle-orm": "catalog:",
     "drizzle-zod": "^0.8.3",
-    "pg": "^8.20.0",
-    "zod": "catalog:"
+    "pg": "^8.16.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@types/pg": "^8.18.0",
-    "drizzle-kit": "^0.31.9"
+    "drizzle-kit": "^0.31.9",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
   }
 }
