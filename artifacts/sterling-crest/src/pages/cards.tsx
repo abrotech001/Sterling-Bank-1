@@ -305,7 +305,7 @@ function CardItem({
 
       <div className="flex gap-2 mt-3 flex-wrap">
         {isInactive && card.kind === "virtual" && (
-          <Button size="sm" className="flex-1 gap-1.5 bg-yellow-500 text-black hover:bg-yellow-400" onClick={onActivate} data-testid={`button-activate-${card.id}`}>
+          <Button size="sm" className="flex-1 gap-1.5 bg-emerald-500 text-white hover:bg-emerald-600" onClick={onActivate} data-testid={`button-activate-${card.id}`}>
             <Zap className="w-3.5 h-3.5" /> Activate Card (${ACTIVATION_FEE})
           </Button>
         )}
