@@ -1,12 +1,24 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Send, MessageCircle, X } from "lucide-react";
+import { Send, MessageCircle, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
 import { onWSMessage } from "@/lib/websocket";
-import { useAuth } from "@/hooks/use-auth";
+import { useToast } from "@/hooks/use-toast";
 import DashboardLayout from "@/components/layout/dashboard-layout";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useLocation } from "wouter";
 
 type Message = {
   id: number;
@@ -18,12 +30,29 @@ type Message = {
 };
 
 export default function SupportPage() {
-  const { user } = useAuth();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const endSession = async () => {
+    setEndingSession(true);
+    try {
+      await api.delete("/support/messages");
+      setMessages([]);
+      toast({ title: "Session ended", description: "Your chat history has been cleared." });
+      navigate("/dashboard");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to end session";
+      toast({ title: "Error", description: msg, variant: "destructive" });
+    } finally {
+      setEndingSession(false);
+    }
+  };
 
   const fetchMessages = async () => {
     try {
@@ -65,9 +94,35 @@ export default function SupportPage() {
   return (
     <DashboardLayout>
       <div className="max-w-2xl mx-auto h-[calc(100vh-8rem)] flex flex-col">
-        <div className="mb-4">
-          <h1 className="text-2xl font-bold">Live Support</h1>
-          <p className="text-muted-foreground">Chat with our support team in real time</p>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-bold">Live Support</h1>
+            <p className="text-muted-foreground">Chat with our support team in real time</p>
+          </div>
+          {messages.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10">
+                  <LogOut className="w-3.5 h-3.5" />
+                  End Session
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>End support session?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently clear your entire chat history with support. The next time you visit, you'll start with a fresh conversation. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={endSession} disabled={endingSession} className="bg-destructive hover:bg-destructive/90">
+                    {endingSession ? "Ending..." : "End Session"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         <div className="flex-1 bg-card border border-border rounded-2xl flex flex-col overflow-hidden">

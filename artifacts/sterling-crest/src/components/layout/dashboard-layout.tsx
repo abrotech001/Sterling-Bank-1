@@ -3,7 +3,8 @@ import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, Download, Upload,
-  Gift, FileText, Bell, Settings, LogOut, MessageCircle, Shield, Menu, X, ChevronRight
+  Gift, FileText, Bell, Settings, LogOut, MessageCircle, Shield, Menu, X, ChevronRight,
+  Home, Landmark, TrendingUp, Award, User
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -156,10 +157,47 @@ export default function DashboardLayout({ children }: Props) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">
           {children}
         </main>
       </div>
+
+      <BottomNav location={location} navigate={navigate} />
     </div>
+  );
+}
+
+const bottomNavItems = [
+  { icon: Home, label: "Home", path: "/dashboard" },
+  { icon: Landmark, label: "Loan", path: "/loans" },
+  { icon: TrendingUp, label: "Wealth", path: "/wealth" },
+  { icon: Award, label: "Reward", path: "/rewards" },
+  { icon: User, label: "Me", path: "/settings" },
+];
+
+function BottomNav({ location, navigate }: { location: string; navigate: (p: string) => void }) {
+  return (
+    <nav className="lg:hidden fixed bottom-0 inset-x-0 z-30 bg-card/95 backdrop-blur-xl border-t border-border">
+      <div className="flex items-stretch justify-around px-1 py-1.5 pb-[max(env(safe-area-inset-bottom),0.5rem)]">
+        {bottomNavItems.map((item) => {
+          const active = location === item.path;
+          return (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={cn(
+                "flex-1 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg transition-colors",
+                active ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <item.icon className={cn("w-5 h-5 transition-transform", active && "scale-110")} />
+              <span className={cn("text-[10px] font-medium leading-tight", active && "font-semibold")}>
+                {item.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </nav>
   );
 }

@@ -49,6 +49,26 @@ router.post("/message", requireAuth, async (req, res) => {
   }
 });
 
+router.delete("/messages", requireAuth, async (req, res) => {
+  try {
+    await db.delete(supportMessagesTable).where(eq(supportMessagesTable.userId, req.userId!));
+
+    const supportBot = getSupportBot();
+    const user = req.user!;
+    if (supportBot && ADMIN_CHAT_ID) {
+      supportBot.sendMessage(
+        ADMIN_CHAT_ID,
+        `🔚 SESSION ENDED\n\nUser: @${user.username} (User #${req.userId}) has ended their support session and cleared the chat.`
+      ).catch(() => {});
+    }
+
+    res.json({ success: true, message: "Support session ended" });
+  } catch (e) {
+    req.log.error({ e }, "Error ending support session");
+    res.status(500).json({ error: "Failed to end session" });
+  }
+});
+
 router.get("/messages", requireAuth, async (req, res) => {
   try {
     const messages = await db.select().from(supportMessagesTable)

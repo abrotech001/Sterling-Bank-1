@@ -18,6 +18,7 @@ type Card = {
   id: number;
   cardType: string;
   cardNetwork: string;
+  cardName?: string | null;
   last4: string;
   expiryMonth: number;
   expiryYear: number;
@@ -44,26 +45,33 @@ export default function CardsPage() {
   const [cardNetwork, setCardNetwork] = useState("visa");
   const [cardType, setCardType] = useState("debit");
   const [cardholderName, setCardholderName] = useState("");
+  const [cardName, setCardName] = useState("");
 
   const fetchCards = () => {
-    api.get<{ cards: Card[] }>("/cards")
-      .then((r) => setCards(r.cards))
+    api.get<Card[] | { cards: Card[] }>("/cards")
+      .then((r) => setCards(Array.isArray(r) ? r : (r?.cards ?? [])))
+      .catch(() => setCards([]))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchCards(); }, []);
 
   const addCard = async () => {
+    if (!cardName.trim()) {
+      toast({ title: "Enter a card name", description: "e.g. Travel, Groceries, Main Card", variant: "destructive" });
+      return;
+    }
     if (!cardholderName.trim()) {
       toast({ title: "Enter cardholder name", variant: "destructive" });
       return;
     }
     setAddLoading(true);
     try {
-      await api.post("/cards", { cardType, cardNetwork, cardholderName, isVirtual: true });
+      await api.post("/cards", { cardType, cardNetwork, cardholderName, cardName, isVirtual: true });
       fetchCards();
       setAddOpen(false);
       setCardholderName("");
+      setCardName("");
       toast({ title: "Card issued successfully!" });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to issue card";
@@ -101,6 +109,17 @@ export default function CardsPage() {
                 <DialogTitle>Issue New Card</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 mt-2">
+                <div className="space-y-1.5">
+                  <Label>Card Name</Label>
+                  <Input
+                    value={cardName}
+                    onChange={(e) => setCardName(e.target.value)}
+                    placeholder="e.g. Travel, Groceries, Main Card"
+                    className="h-11"
+                    maxLength={40}
+                  />
+                  <p className="text-xs text-muted-foreground">A nickname so you can recognize this card.</p>
+                </div>
                 <div className="space-y-1.5">
                   <Label>Card Type</Label>
                   <Select value={cardType} onValueChange={setCardType}>
@@ -176,7 +195,10 @@ export default function CardsPage() {
                       <div className="relative flex justify-between items-start">
                         <div>
                           <div className="text-xs text-white/60 uppercase tracking-widest mb-0.5">Crestfield</div>
-                          <div className="text-xs font-semibold capitalize">{card.cardType} Card</div>
+                          <div className="text-sm font-bold leading-tight">{card.cardName || `${card.cardType} Card`}</div>
+                          {card.cardName && (
+                            <div className="text-[10px] text-white/60 uppercase tracking-wider">{card.cardType} CARD</div>
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           {card.isVirtual && (

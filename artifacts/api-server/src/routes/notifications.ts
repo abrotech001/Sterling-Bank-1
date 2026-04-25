@@ -13,14 +13,16 @@ router.get("/", requireAuth, async (req, res) => {
       .orderBy(desc(notificationsTable.createdAt))
       .limit(50);
 
-    res.json(notifications.map(n => ({
-      id: n.id,
-      type: n.type,
-      title: n.title,
-      message: n.message,
-      isRead: n.isRead,
-      createdAt: n.createdAt,
-    })));
+    res.json({
+      notifications: notifications.map(n => ({
+        id: n.id,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        isRead: n.isRead,
+        createdAt: n.createdAt,
+      })),
+    });
   } catch (e) {
     req.log.error({ e }, "Error getting notifications");
     res.status(500).json({ error: "Failed to get notifications" });
