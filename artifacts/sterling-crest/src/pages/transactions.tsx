@@ -122,7 +122,7 @@ export default function TransactionsPage() {
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl mx-auto space-y-4">
+      <div className="max-w-6xl mx-auto space-y-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">Transactions</h1>
           <p className="text-sm text-muted-foreground">Your full transaction history</p>
@@ -229,7 +229,7 @@ export default function TransactionsPage() {
               {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-14 rounded-xl" />)}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
+            <div className="text-center py-8 text-muted-foreground">
               <Filter className="w-7 h-7 mx-auto mb-2 opacity-40" />
               <p className="text-sm">No transactions found for {periodLabel}</p>
             </div>

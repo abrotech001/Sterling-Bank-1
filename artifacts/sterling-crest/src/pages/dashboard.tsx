@@ -221,7 +221,7 @@ export default function DashboardPage() {
                   {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 rounded-xl" />)}
                 </div>
               ) : transactions.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground text-sm">
+                <div className="text-center py-6 text-muted-foreground text-sm">
                   No transactions yet.
                 </div>
               ) : (

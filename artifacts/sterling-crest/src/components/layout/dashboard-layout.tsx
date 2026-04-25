@@ -62,7 +62,7 @@ const navSections: { title: string; items: { icon: typeof LayoutDashboard; label
   {
     title: "Account",
     items: [
-      { icon: Shield, label: "Tier Verification", path: "/kyc" },
+      { icon: Shield, label: "KYC Verification", path: "/kyc" },
       { icon: MessageCircle, label: "Live Support", path: "/support" },
       { icon: Settings, label: "Settings", path: "/settings" },
     ],
@@ -218,7 +218,7 @@ export default function DashboardLayout({ children }: Props) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6 pb-24 lg:pb-6">
+        <main className="flex-1 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-5 pb-20 lg:pb-5">
           {children}
         </main>
       </div>
