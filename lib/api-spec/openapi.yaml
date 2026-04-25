@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Sterling Crest Bank API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: users
+  - name: wallet
+  - name: transactions
+  - name: kyc
+  - name: cards
+  - name: giftcards
+  - name: notifications
+  - name: support
+  - name: admin
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,604 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterBody"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/verify-otp:
+    post:
+      operationId: verifyOtp
+      tags: [auth]
+      summary: Verify OTP code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpBody"
+      responses:
+        "200":
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid OTP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout user
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request password reset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordBody"
+      responses:
+        "200":
+          description: Reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Reset password with token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordBody"
+      responses:
+        "200":
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserWithWallet"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile:
+    get:
+      operationId: getProfile
+      tags: [users]
+      summary: Get user profile
+      responses:
+        "200":
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+
+  /users/set-pin:
+    post:
+      operationId: setPin
+      tags: [users]
+      summary: Set transaction PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetPinBody"
+      responses:
+        "200":
+          description: PIN set successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /users/verify-pin:
+    post:
+      operationId: verifyPin
+      tags: [users]
+      summary: Verify transaction PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyPinBody"
+      responses:
+        "200":
+          description: PIN verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
+          description: Invalid PIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get wallet details
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/portfolio:
+    get:
+      operationId: getPortfolio
+      tags: [wallet]
+      summary: Get portfolio overview
+      responses:
+        "200":
+          description: Portfolio data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Portfolio"
+
+  /wallet/deposit:
+    post:
+      operationId: deposit
+      tags: [wallet]
+      summary: Deposit funds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepositBody"
+      responses:
+        "200":
+          description: Deposit processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+
+  /transactions:
+    get:
+      operationId: getTransactions
+      tags: [transactions]
+      summary: Get transaction history
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, transfer, withdrawal, deposit, gift_card, admin_fund]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, pending, completed, failed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        "200":
+          description: Transactions list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionListResponse"
+
+  /transactions/transfer:
+    post:
+      operationId: transfer
+      tags: [transactions]
+      summary: Transfer funds to another user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TransferBody"
+      responses:
+        "201":
+          description: Transfer created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Insufficient funds or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transactions/withdraw:
+    post:
+      operationId: withdraw
+      tags: [transactions]
+      summary: Withdraw funds
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WithdrawBody"
+      responses:
+        "201":
+          description: Withdrawal request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /transactions/{id}/receipt:
+    get:
+      operationId: getTransactionReceipt
+      tags: [transactions]
+      summary: Get transaction receipt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Receipt data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionReceipt"
+
+  /kyc/status:
+    get:
+      operationId: getKycStatus
+      tags: [kyc]
+      summary: Get KYC verification status
+      responses:
+        "200":
+          description: KYC status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KycStatus"
+
+  /kyc/submit:
+    post:
+      operationId: submitKyc
+      tags: [kyc]
+      summary: Submit KYC documents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/KycSubmitBody"
+      responses:
+        "201":
+          description: KYC submitted for review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /cards:
+    get:
+      operationId: getCards
+      tags: [cards]
+      summary: Get user's bank cards
+      responses:
+        "200":
+          description: Cards list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankCard"
+
+    post:
+      operationId: addCard
+      tags: [cards]
+      summary: Add bank card
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AddCardBody"
+      responses:
+        "201":
+          description: Card added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankCard"
+
+  /cards/{id}:
+    delete:
+      operationId: deleteCard
+      tags: [cards]
+      summary: Delete bank card
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Card deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /gift-cards:
+    post:
+      operationId: submitGiftCard
+      tags: [giftcards]
+      summary: Submit gift card for redemption
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GiftCardBody"
+      responses:
+        "201":
+          description: Gift card submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+
+  /notifications:
+    get:
+      operationId: getNotifications
+      tags: [notifications]
+      summary: Get user notifications
+      responses:
+        "200":
+          description: Notifications list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked as read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /support/message:
+    post:
+      operationId: sendSupportMessage
+      tags: [support]
+      summary: Send support message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupportMessageBody"
+      responses:
+        "201":
+          description: Message sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /support/messages:
+    get:
+      operationId: getSupportMessages
+      tags: [support]
+      summary: Get support conversation
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SupportMessage"
+
+  /admin/telegram-webhook:
+    post:
+      operationId: telegramWebhook
+      tags: [admin]
+      summary: Telegram bot webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /admin/support-webhook:
+    post:
+      operationId: supportTelegramWebhook
+      tags: [admin]
+      summary: Support Telegram bot webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /ip-location:
+    get:
+      operationId: getIpLocation
+      tags: [users]
+      summary: Get user location from IP
+      responses:
+        "200":
+          description: Location data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IpLocation"
+
 components:
   schemas:
     HealthStatus:
@@ -31,6 +637,530 @@ components:
       properties:
         status:
           type: string
-      required:
-        - status
+      required: [status]
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success]
+
+    RegisterBody:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        password:
+          type: string
+        confirmPassword:
+          type: string
+      required: [email, username, phone, country, password, confirmPassword]
+
+    VerifyOtpBody:
+      type: object
+      properties:
+        email:
+          type: string
+        otp:
+          type: string
+      required: [email, otp]
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required: [email, password]
+
+    ForgotPasswordBody:
+      type: object
+      properties:
+        email:
+          type: string
+      required: [email]
+
+    ResetPasswordBody:
+      type: object
+      properties:
+        token:
+          type: string
+        password:
+          type: string
+        confirmPassword:
+          type: string
+      required: [token, password, confirmPassword]
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+        requiresOtp:
+          type: boolean
+        message:
+          type: string
+      required: [user]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+          enum: [active, frozen, pending_verification]
+        kycLevel:
+          type: integer
+        hasPin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        accountNumber:
+          type: string
+      required: [id, email, username, status, kycLevel, hasPin, createdAt]
+
+    UserWithWallet:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        kycLevel:
+          type: integer
+        hasPin:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        accountNumber:
+          type: string
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+      required: [id, email, username, status, kycLevel, hasPin, createdAt]
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        username:
+          type: string
+        phone:
+          type: string
+        country:
+          type: string
+        status:
+          type: string
+        kycLevel:
+          type: integer
+        hasPin:
+          type: boolean
+        accountNumber:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        wallet:
+          $ref: "#/components/schemas/Wallet"
+      required: [id, email, username, status, kycLevel, hasPin, createdAt, accountNumber]
+
+    SetPinBody:
+      type: object
+      properties:
+        pin:
+          type: string
+        confirmPin:
+          type: string
+      required: [pin, confirmPin]
+
+    VerifyPinBody:
+      type: object
+      properties:
+        pin:
+          type: string
+      required: [pin]
+
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        balance:
+          type: number
+        pendingBalance:
+          type: number
+        currency:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, userId, balance, pendingBalance, currency]
+
+    Portfolio:
+      type: object
+      properties:
+        netWorth:
+          type: number
+        monthlyIncome:
+          type: number
+        monthlySpending:
+          type: number
+        savingsRate:
+          type: number
+        balanceHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/BalancePoint"
+        spendingCategories:
+          type: array
+          items:
+            $ref: "#/components/schemas/SpendingCategory"
+        monthlyActivity:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyActivity"
+      required: [netWorth, monthlyIncome, monthlySpending, savingsRate, balanceHistory, spendingCategories, monthlyActivity]
+
+    BalancePoint:
+      type: object
+      properties:
+        date:
+          type: string
+        balance:
+          type: number
+      required: [date, balance]
+
+    SpendingCategory:
+      type: object
+      properties:
+        name:
+          type: string
+        amount:
+          type: number
+        color:
+          type: string
+      required: [name, amount]
+
+    MonthlyActivity:
+      type: object
+      properties:
+        month:
+          type: string
+        income:
+          type: number
+        spending:
+          type: number
+      required: [month, income, spending]
+
+    DepositBody:
+      type: object
+      properties:
+        amount:
+          type: number
+      required: [amount]
+
+    TransferBody:
+      type: object
+      properties:
+        recipientAccountNumber:
+          type: string
+        amount:
+          type: number
+        pin:
+          type: string
+        note:
+          type: string
+      required: [recipientAccountNumber, amount, pin]
+
+    WithdrawBody:
+      type: object
+      properties:
+        amount:
+          type: number
+        method:
+          type: string
+          enum: [cash_app, paypal, revolut, bank_transfer, bank_card]
+        destination:
+          type: string
+        bankName:
+          type: string
+        accountDetails:
+          type: string
+        pin:
+          type: string
+        note:
+          type: string
+      required: [amount, method, destination, pin]
+
+    TransactionResponse:
+      type: object
+      properties:
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+        message:
+          type: string
+      required: [transaction]
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [transfer, withdrawal, deposit, gift_card, admin_fund]
+        amount:
+          type: number
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        note:
+          type: string
+        declineReason:
+          type: string
+        senderId:
+          type: integer
+        receiverId:
+          type: integer
+        senderUsername:
+          type: string
+        receiverUsername:
+          type: string
+        method:
+          type: string
+        destination:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, type, amount, status, createdAt]
+
+    TransactionListResponse:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transaction"
+        total:
+          type: integer
+      required: [transactions, total]
+
+    TransactionReceipt:
+      type: object
+      properties:
+        transaction:
+          $ref: "#/components/schemas/Transaction"
+        bank:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+      required: [transaction, bank, generatedAt]
+
+    KycStatus:
+      type: object
+      properties:
+        level:
+          type: integer
+        status:
+          type: string
+          enum: [not_started, pending, approved, rejected]
+        rejectionReason:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+      required: [level, status]
+
+    KycSubmitBody:
+      type: object
+      properties:
+        fullName:
+          type: string
+        dateOfBirth:
+          type: string
+        address:
+          type: string
+        idType:
+          type: string
+          enum: [passport, drivers_license, national_id]
+        idNumber:
+          type: string
+        idFrontImage:
+          type: string
+        idBackImage:
+          type: string
+        selfieImage:
+          type: string
+      required: [fullName, dateOfBirth, address, idType, idNumber, idFrontImage]
+
+    BankCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        cardHolderName:
+          type: string
+        last4:
+          type: string
+        brand:
+          type: string
+        expiryMonth:
+          type: string
+        expiryYear:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, cardHolderName, last4, brand, expiryMonth, expiryYear, createdAt]
+
+    AddCardBody:
+      type: object
+      properties:
+        cardNumber:
+          type: string
+        cardHolderName:
+          type: string
+        expiryMonth:
+          type: string
+        expiryYear:
+          type: string
+        cvv:
+          type: string
+      required: [cardNumber, cardHolderName, expiryMonth, expiryYear, cvv]
+
+    GiftCardBody:
+      type: object
+      properties:
+        brand:
+          type: string
+        code:
+          type: string
+        amount:
+          type: number
+        frontImage:
+          type: string
+        backImage:
+          type: string
+        pin:
+          type: string
+      required: [brand, code, amount, frontImage, pin]
+
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        title:
+          type: string
+        message:
+          type: string
+        isRead:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, type, title, message, isRead, createdAt]
+
+    SupportMessageBody:
+      type: object
+      properties:
+        message:
+          type: string
+      required: [message]
+
+    SupportMessage:
+      type: object
+      properties:
+        id:
+          type: integer
+        message:
+          type: string
+        isFromUser:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, message, isFromUser, createdAt]
+
+    IpLocation:
+      type: object
+      properties:
+        country:
+          type: string
+        countryCode:
+          type: string
+        region:
+          type: string
+        city:
+          type: string
+        banks:
+          type: array
+          items:
+            $ref: "#/components/schemas/RegionalBank"
+      required: [country, countryCode, banks]
+
+    RegionalBank:
+      type: object
+      properties:
+        name:
+          type: string
+        logo:
+          type: string
+        code:
+          type: string
+      required: [name, code]
