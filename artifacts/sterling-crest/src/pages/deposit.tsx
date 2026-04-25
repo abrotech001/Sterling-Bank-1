@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, Copy, Info, Bitcoin, Wallet, ArrowLeftRight, Eye, EyeOff,
-  ShieldAlert, Loader2, Sparkles, X, KeyRound, ArrowDownToLine,
+  Copy, ArrowLeftRight, Eye, EyeOff,
+  ShieldAlert, Loader2, Sparkles, X, KeyRound, QrCode,
 } from "lucide-react";
 import { QRCodeCanvas } from "qrcode.react";
 import { Button } from "@/components/ui/button";
@@ -39,59 +38,25 @@ type CryptoSwap = {
 };
 
 const CRYPTO_ASSETS = [
-  { id: "btc", name: "Bitcoin", symbol: "BTC", color: "from-orange-500 to-yellow-500", textColor: "text-orange-400", network: "Bitcoin (BTC)" },
-  { id: "eth", name: "Ethereum", symbol: "ETH", color: "from-indigo-500 to-purple-500", textColor: "text-indigo-400", network: "ERC-20" },
-  { id: "usdt", name: "Tether USD", symbol: "USDT", color: "from-emerald-500 to-teal-500", textColor: "text-emerald-400", network: "ERC-20" },
-  { id: "sol", name: "Solana", symbol: "SOL", color: "from-fuchsia-500 to-purple-500", textColor: "text-fuchsia-400", network: "Solana (SOL)" },
-  { id: "xrp", name: "XRP", symbol: "XRP", color: "from-sky-500 to-blue-500", textColor: "text-sky-400", network: "XRP Ledger" },
+  { id: "btc", name: "Bitcoin", symbol: "BTC", color: "from-orange-500 to-yellow-500", textColor: "text-orange-400", network: "Bitcoin (BTC)", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/btc.svg" },
+  { id: "eth", name: "Ethereum", symbol: "ETH", color: "from-indigo-500 to-purple-500", textColor: "text-indigo-400", network: "ERC-20", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/eth.svg" },
+  { id: "usdt", name: "Tether USD", symbol: "USDT", color: "from-emerald-500 to-teal-500", textColor: "text-emerald-400", network: "ERC-20", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/usdt.svg" },
+  { id: "sol", name: "Solana", symbol: "SOL", color: "from-fuchsia-500 to-purple-500", textColor: "text-fuchsia-400", network: "Solana (SOL)", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/sol.svg" },
+  { id: "xrp", name: "XRP", symbol: "XRP", color: "from-sky-500 to-blue-500", textColor: "text-sky-400", network: "XRP Ledger", logo: "https://cdn.jsdelivr.net/gh/atomiclabs/cryptocurrency-icons@1a63530be6e374711a8554f31b17e4cb92c25fa5/svg/color/xrp.svg" },
 ];
 
 export default function DepositPage() {
-  const [, navigate] = useLocation();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [tab, setTab] = useState<"crypto" | "bank">("crypto");
 
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-5">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Deposit Funds</h1>
-          <p className="text-sm text-muted-foreground">Add money to your Crestfield account</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Crypto Deposit</h1>
+          <p className="text-sm text-muted-foreground">Receive crypto into your Crestfield wallet</p>
         </div>
 
-        <div className="inline-flex bg-card border border-border rounded-xl p-1 gap-1">
-          <button
-            onClick={() => setTab("crypto")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === "crypto" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
-            }`}
-            data-testid="tab-crypto"
-          >
-            <Bitcoin className="w-4 h-4" /> Crypto
-          </button>
-          <button
-            onClick={() => setTab("bank")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === "bank" ? "bg-primary text-primary-foreground shadow" : "text-muted-foreground hover:text-foreground"
-            }`}
-            data-testid="tab-bank"
-          >
-            <Wallet className="w-4 h-4" /> Bank Transfer
-          </button>
-        </div>
-
-        <AnimatePresence mode="wait">
-          {tab === "crypto" ? (
-            <motion.div key="crypto" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <CryptoTab toast={toast} />
-            </motion.div>
-          ) : (
-            <motion.div key="bank" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
-              <BankTab user={user} toast={toast} navigate={navigate} />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <CryptoTab toast={toast} />
       </div>
     </DashboardLayout>
   );
@@ -186,11 +151,11 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
           </div>
         </div>
 
-        <div className="grid sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {CRYPTO_ASSETS.map((a) => (
-            <div key={a.id} className={`p-3 rounded-xl bg-gradient-to-br ${a.color} text-white text-center`}>
-              <div className="font-bold text-sm">{a.symbol}</div>
-              <div className="text-[10px] opacity-90">{a.name}</div>
+            <div key={a.id} className="p-3 rounded-xl bg-background border border-border text-center flex flex-col items-center gap-1.5">
+              <img src={a.logo} alt={a.symbol} className="w-8 h-8" loading="lazy" />
+              <div className="font-bold text-[11px]">{a.symbol}</div>
             </div>
           ))}
         </div>
@@ -353,8 +318,8 @@ function CryptoCard({
     <div className="bg-card border border-border rounded-2xl p-4 space-y-3" data-testid={`card-asset-${asset.id}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${asset.color} flex items-center justify-center text-white font-bold text-xs`}>
-            {asset.symbol}
+          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center">
+            <img src={asset.logo} alt={asset.symbol} className="w-7 h-7" loading="lazy" />
           </div>
           <div>
             <div className="font-semibold text-sm">{asset.name}</div>
@@ -380,7 +345,7 @@ function CryptoCard({
         </button>
       </div>
       <Button size="sm" variant="outline" className="w-full h-9" onClick={onReceive} data-testid={`button-receive-${asset.id}`}>
-        <ArrowDownToLine className="w-3.5 h-3.5 mr-1.5" /> Receive {asset.symbol}
+        <QrCode className="w-3.5 h-3.5 mr-1.5" /> Receive {asset.symbol}
       </Button>
     </div>
   );
@@ -611,127 +576,3 @@ function ModalShell({ children, onClose, title }: { children: React.ReactNode; o
   );
 }
 
-// ============================================================================
-// Bank tab — kept identical to previous deposit page
-// ============================================================================
-
-const DEPOSIT_METHODS = [
-  { id: "wire", label: "Wire Transfer", desc: "Domestic & international bank wire", time: "1-3 business days" },
-  { id: "ach", label: "ACH Transfer", desc: "US bank account direct transfer", time: "2-5 business days" },
-];
-
-function BankTab({
-  user, toast, navigate,
-}: {
-  user: ReturnType<typeof useAuth>["user"];
-  toast: ReturnType<typeof useToast>["toast"];
-  navigate: (p: string) => void;
-}) {
-  const [method, setMethod] = useState("wire");
-  const [amount, setAmount] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-
-  const copy = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ title: "Copied!", description: "Copied to clipboard" });
-  };
-
-  const submit = async () => {
-    if (!amount || parseFloat(amount) <= 0) {
-      toast({ title: "Enter a valid amount", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      await api.post("/transactions/deposit", { amount: parseFloat(amount), method, description: `${method.toUpperCase()} deposit` });
-      setSubmitted(true);
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : "Deposit request failed";
-      toast({ title: "Error", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (submitted) {
-    return (
-      <div className="max-w-md mx-auto pt-2">
-        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-card border border-border rounded-2xl p-6 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
-            <CheckCircle2 className="w-8 h-8 text-primary" />
-          </div>
-          <h2 className="text-xl font-bold mb-2">Deposit Initiated</h2>
-          <p className="text-sm text-muted-foreground mb-5">Your deposit of <span className="font-semibold text-foreground">{formatCurrency(amount)}</span> has been registered. Please complete the transfer using the instructions provided.</p>
-          <div className="flex gap-3">
-            <Button className="flex-1" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
-            <Button variant="outline" className="flex-1" onClick={() => { setSubmitted(false); setAmount(""); }}>New Deposit</Button>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="max-w-xl space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        {DEPOSIT_METHODS.map((m) => (
-          <button
-            key={m.id}
-            onClick={() => setMethod(m.id)}
-            className={`p-3 rounded-xl border text-left transition-all ${
-              method === m.id ? "border-primary bg-primary/10" : "border-border bg-card hover:border-primary/30"
-            }`}
-            data-testid={`bank-method-${m.id}`}
-          >
-            <div className="font-semibold text-sm">{m.label}</div>
-            <div className="text-[11px] text-muted-foreground mt-0.5 leading-tight">{m.desc}</div>
-            <div className="text-[10px] text-primary mt-1 font-medium">{m.time}</div>
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 space-y-4">
-        <div className="space-y-1.5">
-          <Label>Deposit Amount (USD)</Label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-            <Input type="number" step="0.01" min="1" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} className="h-11 pl-8" />
-          </div>
-          {amount && parseFloat(amount) > 0 && (
-            <p className="text-xs text-muted-foreground">Amount: <span className="font-medium text-foreground">{formatCurrency(amount)}</span></p>
-          )}
-        </div>
-
-        <div className="bg-background border border-border rounded-xl p-3 sm:p-4 space-y-2.5">
-          <p className="text-sm font-medium flex items-center gap-2">
-            <Info className="w-4 h-4 text-primary" />
-            {method === "wire" ? "Wire Transfer Instructions" : "ACH Transfer Instructions"}
-          </p>
-          {[
-            ["Bank Name", "Crestfield Bank"],
-            ["Account Name", `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim() || user?.username || "—"],
-            ["Account Number", user?.accountNumber ?? ""],
-            ["Routing Number", "026009593"],
-            ...(method === "wire" ? [["SWIFT/BIC", "SCBKUS33"]] : []),
-            ["Reference", `DEP-${user?.id}`],
-          ].map(([label, val]) => (
-            <div key={label} className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground flex-shrink-0">{label}</span>
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-xs font-mono font-medium truncate">{val}</span>
-                <button onClick={() => copy(val as string)} className="text-muted-foreground hover:text-foreground flex-shrink-0">
-                  <Copy className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Button className="w-full h-11" onClick={submit} disabled={loading || !amount}>
-          {loading ? "Processing..." : "Submit Deposit Request"}
-        </Button>
-      </div>
-    </div>
-  );
-}
