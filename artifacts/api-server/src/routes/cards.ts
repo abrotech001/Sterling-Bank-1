@@ -204,7 +204,7 @@ router.post("/:id/activate", requireAuth, async (req, res) => {
         amount: ACTIVATION_FEE.toString(),
         status: "completed",
         senderId: userId,
-        note: `Virtual card activation fee — Card ****${card.last4}`,
+        note: `Virtual card activation fee`,
       }).returning();
 
       const [updatedCard] = await tx.update(cardsTable)
