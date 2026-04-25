@@ -17,10 +17,14 @@ export function useNotifications() {
 
   const fetchNotifications = async () => {
     try {
-      const data = await api.get<{ notifications: Notification[] }>("/notifications");
-      setNotifications(data.notifications);
-      setUnread(data.notifications.filter((n) => !n.isRead).length);
-    } catch {}
+      const data = await api.get<Notification[] | { notifications: Notification[] }>("/notifications");
+      const list = Array.isArray(data) ? data : (data?.notifications ?? []);
+      setNotifications(list);
+      setUnread(list.filter((n) => !n.isRead).length);
+    } catch {
+      setNotifications([]);
+      setUnread(0);
+    }
   };
 
   const markRead = async (id: number) => {

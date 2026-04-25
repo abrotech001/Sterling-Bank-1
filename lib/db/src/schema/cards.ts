@@ -7,6 +7,7 @@ export const cardsTable = pgTable("cards", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => usersTable.id),
   cardHolderName: text("card_holder_name").notNull(),
+  cardName: text("card_name"),
   cardNumberHash: text("card_number_hash").notNull(),
   last4: text("last4").notNull(),
   brand: text("brand").notNull(),

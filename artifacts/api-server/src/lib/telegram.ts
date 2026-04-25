@@ -155,6 +155,67 @@ function setupAdminBotHandlers(bot: TelegramBot) {
     }
   });
 
+  bot.on("message", async (msg) => {
+    if (msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
+    if (!msg.text || msg.text.startsWith("/")) return;
+
+    const replyTo = msg.reply_to_message;
+    if (!replyTo || !replyTo.text) return;
+
+    const fundMatch = replyTo.text.match(/^💰 Funding @(\S+) \(([^)]+)\)/);
+    if (!fundMatch) return;
+
+    const accountNumber = fundMatch[2];
+    const parts = msg.text.trim().split(/\s+/);
+    const amount = parseFloat(parts[0]);
+    const reason = parts.slice(1).join(" ") || "Admin credit";
+
+    if (isNaN(amount) || amount <= 0) {
+      bot.sendMessage(msg.chat.id, "⚠️ Invalid amount. Reply with: <amount> [reason]\nExample: 5000 Welcome bonus");
+      return;
+    }
+
+    try {
+      const [user] = await db.select().from(usersTable).where(eq(usersTable.accountNumber, accountNumber));
+      if (!user) {
+        bot.sendMessage(msg.chat.id, "User not found");
+        return;
+      }
+
+      await db.update(walletsTable)
+        .set({ balance: sql`${walletsTable.balance} + ${amount}`, updatedAt: new Date() })
+        .where(eq(walletsTable.userId, user.id));
+
+      const [tx] = await db.insert(transactionsTable).values({
+        type: "admin_fund",
+        amount: amount.toString(),
+        status: "completed",
+        receiverId: user.id,
+        note: reason,
+      }).returning();
+
+      await db.insert(notificationsTable).values({
+        userId: user.id,
+        type: "transaction",
+        title: "Funds Added to Your Account",
+        message: `$${amount.toFixed(2)} has been added to your account. Reason: ${reason}`,
+      });
+
+      await db.insert(adminLogsTable).values({
+        action: "fund_user",
+        targetUserId: user.id,
+        details: `Funded $${amount} to ${accountNumber}. Reason: ${reason}`,
+      });
+
+      broadcastToUser(user.id, { type: "balance_update", data: { transactionId: tx.id } });
+
+      bot.sendMessage(msg.chat.id, `✅ Successfully funded $${amount.toFixed(2)} to @${user.username} (${accountNumber})\nReason: ${reason}`);
+    } catch (e) {
+      logger.error({ e }, "Error processing fund reply");
+      bot.sendMessage(msg.chat.id, "❌ Error funding user");
+    }
+  });
+
   bot.onText(/\/logs/, async (msg) => {
     if (msg.chat.id.toString() !== ADMIN_CHAT_ID) return;
     try {
@@ -253,6 +314,81 @@ function setupAdminBotHandlers(bot: TelegramBot) {
         logger.error({ e }, "Error processing transaction callback");
         bot.answerCallbackQuery(query.id, { text: "Error processing" });
       }
+    }
+
+    if (data.startsWith("freeze_user_") || data.startsWith("unfreeze_user_")) {
+      const isFreeze = data.startsWith("freeze_user_");
+      const userId = parseInt(data.replace(isFreeze ? "freeze_user_" : "unfreeze_user_", ""));
+
+      try {
+        const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+        if (!user) {
+          bot.answerCallbackQuery(query.id, { text: "User not found" });
+          return;
+        }
+
+        const newStatus = isFreeze ? "frozen" : "active";
+        await db.update(usersTable).set({ status: newStatus }).where(eq(usersTable.id, userId));
+        await db.insert(adminLogsTable).values({
+          action: isFreeze ? "freeze_user" : "unfreeze_user",
+          targetUserId: userId,
+          details: `User ${isFreeze ? "frozen" : "unfrozen"} via Telegram inline button`,
+        });
+        await db.insert(notificationsTable).values({
+          userId,
+          type: "account",
+          title: isFreeze ? "Account Frozen" : "Account Reactivated",
+          message: isFreeze
+            ? "Your account has been temporarily frozen by an administrator. Please contact support."
+            : "Your account has been reactivated. Welcome back!",
+        });
+        broadcastToUser(userId, { type: "account_status", data: { status: newStatus } });
+
+        bot.answerCallbackQuery(query.id, { text: isFreeze ? "User frozen" : "User unfrozen" });
+
+        const newKeyboard = [[
+          isFreeze
+            ? { text: "♻️ Unfreeze", callback_data: `unfreeze_user_${userId}` }
+            : { text: "🧊 Freeze", callback_data: `freeze_user_${userId}` },
+          { text: "💰 Fund", callback_data: `fund_user_${userId}` },
+        ]];
+        bot.editMessageReplyMarkup(
+          { inline_keyboard: newKeyboard },
+          { chat_id: chatId, message_id: query.message?.message_id }
+        ).catch(() => {});
+      } catch (e) {
+        logger.error({ e }, "Error processing freeze callback");
+        bot.answerCallbackQuery(query.id, { text: "Error processing" });
+      }
+      return;
+    }
+
+    if (data.startsWith("fund_user_")) {
+      const userId = parseInt(data.replace("fund_user_", ""));
+
+      try {
+        const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+        if (!user) {
+          bot.answerCallbackQuery(query.id, { text: "User not found" });
+          return;
+        }
+
+        bot.answerCallbackQuery(query.id, { text: "Reply with the amount" });
+        await bot.sendMessage(
+          chatId,
+          `💰 Funding @${user.username} (${user.accountNumber})\n\nReply to this message with: <amount> [optional reason]\nExample: 5000 Welcome bonus`,
+          {
+            reply_markup: {
+              force_reply: true,
+              selective: true,
+            },
+          }
+        );
+      } catch (e) {
+        logger.error({ e }, "Error initiating fund");
+        bot.answerCallbackQuery(query.id, { text: "Error" });
+      }
+      return;
     }
 
     if (data.startsWith("approve_kyc_") || data.startsWith("reject_kyc_")) {
