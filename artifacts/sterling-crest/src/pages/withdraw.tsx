@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle2, AlertCircle, MapPin, ArrowLeft, ChevronRight, Loader2, Search,
-  Bitcoin, Building2, Smartphone, Send, DollarSign,
+  CheckCircle2, AlertCircle, MapPin, ArrowLeft, ChevronRight, Loader2, Search, Building2,
 } from "lucide-react";
+import { CashAppIcon, PayPalIcon, VenmoIcon, ZelleIcon, BankIcon, BitcoinIcon } from "@/components/brand/payment-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,18 +25,16 @@ interface MethodConfig {
   feePct: number;
   feeMin: number;
   eta: string;
-  logo: string;
-  color: string;
-  icon: React.ComponentType<{ className?: string }>;
+  Brand: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 const METHODS: MethodConfig[] = [
-  { id: "cashapp", name: "Cash App", description: "Send to a $Cashtag", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.simpleicons.org/cashapp/00D632", color: "from-emerald-500 to-green-600", icon: DollarSign },
-  { id: "paypal", name: "PayPal", description: "Send to a PayPal email", feePct: 0.5, feeMin: 1, eta: "Within 1 hour", logo: "https://cdn.simpleicons.org/paypal/003087", color: "from-blue-500 to-blue-700", icon: Send },
-  { id: "venmo", name: "Venmo", description: "Send to a Venmo username", feePct: 0, feeMin: 0, eta: "Instant", logo: "https://cdn.simpleicons.org/venmo/3D95CE", color: "from-sky-500 to-cyan-600", icon: Smartphone },
-  { id: "zelle", name: "Zelle", description: "US bank-to-bank, instant", feePct: 0, feeMin: 0, eta: "Within minutes", logo: "https://cdn.simpleicons.org/zelle/6D1ED4", color: "from-purple-500 to-fuchsia-600", icon: Send },
-  { id: "bank", name: "Bank Transfer", description: "Domestic ACH or Wire / SWIFT", feePct: 0.25, feeMin: 5, eta: "1-3 business days", logo: "", color: "from-indigo-500 to-blue-700", icon: Building2 },
-  { id: "crypto", name: "Crypto Withdrawal", description: "Send to BTC, ETH, USDT, SOL, XRP", feePct: 1, feeMin: 2, eta: "Within 30 minutes", logo: "", color: "from-orange-500 to-amber-600", icon: Bitcoin },
+  { id: "cashapp", name: "Cash App", description: "Send to a $Cashtag", feePct: 0, feeMin: 0, eta: "Instant", Brand: CashAppIcon },
+  { id: "paypal", name: "PayPal", description: "Send to a PayPal email", feePct: 0.5, feeMin: 1, eta: "Within 1 hour", Brand: PayPalIcon },
+  { id: "venmo", name: "Venmo", description: "Send to a Venmo username", feePct: 0, feeMin: 0, eta: "Instant", Brand: VenmoIcon },
+  { id: "zelle", name: "Zelle", description: "US bank-to-bank, instant", feePct: 0, feeMin: 0, eta: "Within minutes", Brand: ZelleIcon },
+  { id: "bank", name: "Bank Transfer", description: "Domestic ACH or Wire / SWIFT", feePct: 0.25, feeMin: 5, eta: "1-3 business days", Brand: BankIcon },
+  { id: "crypto", name: "Crypto Withdrawal", description: "Send to BTC, ETH, USDT, SOL, XRP", feePct: 1, feeMin: 2, eta: "Within 30 minutes", Brand: BitcoinIcon },
 ];
 
 const POPULAR_US_BANKS = [
@@ -207,7 +205,7 @@ export default function WithdrawPage() {
 
         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-card border border-border px-3 py-2 rounded-xl">
           <MapPin className="w-3.5 h-3.5 text-primary" />
-          Methods for: <span className="text-foreground font-medium">{country}</span>
+          Region: <span className="text-foreground font-medium">{country}</span>
         </div>
 
         <AnimatePresence mode="wait">
@@ -295,12 +293,8 @@ function MethodGrid({ onPick }: { onPick: (m: MethodConfig) => void }) {
           data-testid={`method-${m.id}`}
         >
           <div className="flex items-start gap-3">
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${m.color} flex items-center justify-center flex-shrink-0`}>
-              {m.logo ? (
-                <img src={m.logo} alt={m.name} className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-              ) : (
-                <m.icon className="w-6 h-6 text-white" />
-              )}
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
+              <m.Brand size={48} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
@@ -339,12 +333,8 @@ function DetailsForm({
   return (
     <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 space-y-4">
       <div className="flex items-center gap-3 mb-1">
-        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${method.color} flex items-center justify-center`}>
-          {method.logo ? (
-            <img src={method.logo} alt={method.name} className="w-6 h-6 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          ) : (
-            <method.icon className="w-5 h-5 text-white" />
-          )}
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-md">
+          <method.Brand size={40} />
         </div>
         <div>
           <div className="font-semibold text-sm">{method.name}</div>
@@ -653,12 +643,8 @@ function ReviewCard({
   return (
     <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
       <div className="flex items-center gap-3 pb-4 border-b border-border">
-        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${method.color} flex items-center justify-center flex-shrink-0`}>
-          {method.logo ? (
-            <img src={method.logo} alt={method.name} className="w-7 h-7 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-          ) : (
-            <method.icon className="w-6 h-6 text-white" />
-          )}
+        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden shadow-md">
+          <method.Brand size={48} />
         </div>
         <div>
           <div className="text-xs text-muted-foreground">Withdrawing via</div>
