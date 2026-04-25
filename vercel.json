@@ -3,6 +3,5 @@
   "buildCommand": "pnpm run build --filter @workspace/api-server && node scripts/migrate-db.js",
   "installCommand": "pnpm install",
   "framework": null,
-  "outputDirectory": "artifacts/api-server/dist",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- artifacts/api-server"
+  "outputDirectory": "artifacts/api-server/dist"
 }
