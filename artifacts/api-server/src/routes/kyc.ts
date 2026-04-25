@@ -39,12 +39,20 @@ router.get("/status", requireAuth, async (req, res) => {
 });
 
 router.post("/submit", requireAuth, async (req, res) => {
-  const { fullName, dateOfBirth, address, idType, idNumber, idFrontImage, idBackImage, selfieImage } = req.body;
+  const idType: string | undefined = req.body.idType || req.body.documentType;
+  const idNumber: string | undefined = req.body.idNumber || req.body.documentNumber;
+  const idFrontImage: string | undefined = req.body.idFrontImage || req.body.frontImage;
+  const idBackImage: string | undefined = req.body.idBackImage || req.body.backImage || null;
+  const selfieImage: string | undefined = req.body.selfieImage || req.body.selfie || null;
   const userId = req.userId!;
   const user = req.user!;
 
-  if (!fullName || !dateOfBirth || !address || !idType || !idNumber || !idFrontImage) {
-    res.status(400).json({ error: "All required fields must be provided" });
+  const fullName = req.body.fullName || [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username;
+  const dateOfBirth = req.body.dateOfBirth || "Not provided";
+  const address = req.body.address || user.country || "Not provided";
+
+  if (!idType || !idNumber || !idFrontImage) {
+    res.status(400).json({ error: "Document type, document number and front image are required" });
     return;
   }
 

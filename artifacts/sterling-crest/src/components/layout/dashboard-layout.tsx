@@ -20,7 +20,7 @@ const navItems = [
   { icon: Gift, label: "Gift Cards", path: "/giftcards" },
   { icon: CreditCard, label: "Cards", path: "/cards" },
   { icon: FileText, label: "Transactions", path: "/transactions" },
-  { icon: Shield, label: "KYC Verification", path: "/kyc" },
+  { icon: Shield, label: "Tier Verification", path: "/kyc" },
   { icon: MessageCircle, label: "Live Support", path: "/support" },
   { icon: Settings, label: "Settings", path: "/settings" },
 ];

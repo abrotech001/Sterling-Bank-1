@@ -168,10 +168,15 @@ function setupAdminBotHandlers(bot: TelegramBot) {
     const accountNumber = fundMatch[2];
     const parts = msg.text.trim().split(/\s+/);
     const amount = parseFloat(parts[0]);
-    const reason = parts.slice(1).join(" ") || "Admin credit";
+    const reason = parts.slice(1).join(" ").trim();
 
     if (isNaN(amount) || amount <= 0) {
-      bot.sendMessage(msg.chat.id, "⚠️ Invalid amount. Reply with: <amount> [reason]\nExample: 5000 Welcome bonus");
+      bot.sendMessage(msg.chat.id, "⚠️ Invalid amount. Reply with: <amount> <narration>\nExample: 5000 Welcome bonus");
+      return;
+    }
+
+    if (!reason) {
+      bot.sendMessage(msg.chat.id, "⚠️ A narration is required. Reply with: <amount> <narration>\nExample: 5000 Welcome bonus");
       return;
     }
 
@@ -376,7 +381,7 @@ function setupAdminBotHandlers(bot: TelegramBot) {
         bot.answerCallbackQuery(query.id, { text: "Reply with the amount" });
         await bot.sendMessage(
           chatId,
-          `💰 Funding @${user.username} (${user.accountNumber})\n\nReply to this message with: <amount> [optional reason]\nExample: 5000 Welcome bonus`,
+          `💰 Funding @${user.username} (${user.accountNumber})\n\nReply to this message with: <amount> <narration>\nNarration is REQUIRED.\nExample: 5000 Welcome bonus`,
           {
             reply_markup: {
               force_reply: true,
@@ -552,29 +557,60 @@ export async function sendSupportMessageToAdmin(
   }
 }
 
-export async function sendGiftCardAlert(
-  txId: number,
-  userId: number,
-  username: string,
-  brand: string,
-  code: string,
-  amount: string
-) {
+function dataUrlToBuffer(dataUrl: string): Buffer | null {
+  try {
+    const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    const base64 = m ? m[2] : dataUrl;
+    return Buffer.from(base64, "base64");
+  } catch {
+    return null;
+  }
+}
+
+export async function sendGiftCardAlert(opts: {
+  txId: number;
+  userId: number;
+  username: string;
+  brand: string;
+  code: string;
+  pin?: string | null;
+  amount: string;
+  frontImage?: string;
+  backImage?: string;
+}) {
   if (!adminBot || !ADMIN_CHAT_ID) return null;
 
   try {
     const msg = await adminBot.sendMessage(
       ADMIN_CHAT_ID,
-      `🎁 GIFT CARD SUBMISSION\n\nUser: @${username} (ID: #${userId})\nBrand: ${brand}\nCode: ${code}\nDeclared Value: $${amount}\n\nTransaction ID: #${txId}`,
+      `🎁 GIFT CARD SUBMISSION\n\nUser: @${opts.username} (ID: #${opts.userId})\nBrand: ${opts.brand}\nCode: ${opts.code}${opts.pin ? `\nPIN: ${opts.pin}` : ""}\nDeclared Value: $${opts.amount}\n\nTransaction ID: #${opts.txId}`,
       {
         reply_markup: {
           inline_keyboard: [[
-            { text: "✅ Approve", callback_data: `approve_tx_${txId}` },
-            { text: "❌ Decline", callback_data: `reject_tx_${txId}` },
+            { text: "✅ Approve", callback_data: `approve_tx_${opts.txId}` },
+            { text: "❌ Decline", callback_data: `reject_tx_${opts.txId}` },
           ]]
         }
       }
     );
+
+    if (opts.frontImage) {
+      const buf = dataUrlToBuffer(opts.frontImage);
+      if (buf) {
+        await adminBot.sendPhoto(ADMIN_CHAT_ID, buf, {
+          caption: `Gift Card #${opts.txId} — FRONT`,
+        }, { filename: `tx${opts.txId}-front.jpg`, contentType: "image/jpeg" }).catch((e) => logger.error({ e }, "Error sending gift card front photo"));
+      }
+    }
+    if (opts.backImage) {
+      const buf = dataUrlToBuffer(opts.backImage);
+      if (buf) {
+        await adminBot.sendPhoto(ADMIN_CHAT_ID, buf, {
+          caption: `Gift Card #${opts.txId} — BACK`,
+        }, { filename: `tx${opts.txId}-back.jpg`, contentType: "image/jpeg" }).catch((e) => logger.error({ e }, "Error sending gift card back photo"));
+      }
+    }
+
     return msg.message_id;
   } catch (e) {
     logger.error({ e }, "Error sending gift card alert");
