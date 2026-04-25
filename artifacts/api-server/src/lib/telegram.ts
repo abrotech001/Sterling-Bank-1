@@ -1,9 +1,19 @@
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "@workspace/db";
-import { transactionsTable, usersTable, walletsTable, kycTable, notificationsTable, adminLogsTable, cryptoSwapsTable, cardsTable } from "@workspace/db";
+import {
+  transactionsTable,
+  usersTable,
+  walletsTable,
+  kycTable,
+  notificationsTable,
+  adminLogsTable,
+  cryptoSwapsTable,
+  cardsTable,
+  supportMessagesTable,
+} from "@workspace/db";
 import { eq, sql, and } from "drizzle-orm";
-import { logger } from "./logger";
-import { broadcastToUser } from "./websocket";
+import { logger } from "./logger.js";
+import { broadcastToUser } from "./websocket.js";
 
 const ADMIN_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
 const SUPPORT_BOT_TOKEN = process.env.TELEGRAM_SUPPORT_BOT_TOKEN || "";
@@ -778,7 +788,6 @@ function setupSupportBotHandlers(bot: TelegramBot) {
   });
 }
 
-import { supportMessagesTable } from "@workspace/db";
 
 export async function sendTransactionAlert(
   txId: number,
