@@ -120,7 +120,7 @@ export default function RegisterPage() {
           </h1>
           <p className="text-muted-foreground mt-1">
             {step === "form"
-              ? "Join Sterling Crest Bank today"
+              ? "Join Crestfield Bank today"
               : "Enter the 6-digit code sent to your email"}
           </p>
         </div>

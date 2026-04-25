@@ -35,7 +35,7 @@ export default function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <Shield className="w-4 h-4 text-primary-foreground" />
             </div>
-            <span className="text-lg font-bold tracking-tight">Sterling Crest</span>
+            <span className="text-lg font-bold tracking-tight">Crestfield</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-muted-foreground">
             <a href="#features" className="hover:text-foreground transition-colors">Features</a>
@@ -83,7 +83,7 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Sterling Crest Bank offers premium digital banking with instant global transfers, 
+            Crestfield Bank offers premium digital banking with instant global transfers, 
             smart investments, and enterprise-grade security — all in one elegant platform.
           </motion.p>
 
@@ -194,7 +194,7 @@ export default function LandingPage() {
           >
             <h2 className="text-4xl font-bold mb-4">Ready to transform your banking?</h2>
             <p className="text-muted-foreground text-lg mb-8">
-              Join millions of customers who trust Sterling Crest Bank for their financial future.
+              Join millions of customers who trust Crestfield Bank for their financial future.
             </p>
             <Button size="lg" className="text-base px-10 h-12 gap-2" onClick={() => navigate("/register")}>
               Get Started Free <ArrowRight className="w-4 h-4" />
@@ -209,10 +209,10 @@ export default function LandingPage() {
             <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
               <Shield className="w-3 h-3 text-primary-foreground" />
             </div>
-            <span className="font-semibold text-sm">Sterling Crest Bank</span>
+            <span className="font-semibold text-sm">Crestfield Bank</span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
-            © 2025 Sterling Crest Bank. Member FDIC. Equal Housing Lender.
+            © 2025 Crestfield Bank. Member FDIC. Equal Housing Lender.
           </p>
           <div className="flex gap-4 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground">Privacy</a>

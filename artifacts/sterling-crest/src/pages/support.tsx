@@ -76,7 +76,7 @@ export default function SupportPage() {
               <MessageCircle className="w-4 h-4 text-primary-foreground" />
             </div>
             <div>
-              <div className="font-semibold text-sm">Sterling Crest Support</div>
+              <div className="font-semibold text-sm">Crestfield Support</div>
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-green-400" />
                 <span className="text-xs text-muted-foreground">Online • Typically replies in minutes</span>

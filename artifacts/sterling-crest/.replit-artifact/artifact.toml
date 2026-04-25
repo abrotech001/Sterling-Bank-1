@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/"
-title = "Sterling Crest Bank"
+title = "Crestfield Bank"
 version = "1.0.0"
 id = "artifacts/sterling-crest"
 router = "path"
