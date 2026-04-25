@@ -1,9 +1,9 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 const SALT_ROUNDS = 12;
-const JWT_SECRET = process.env.SESSION_SECRET || "sterling-crest-secret-key";
-const JWT_EXPIRES_IN = "7d";
+const JWT_SECRET = process.env.SESSION_SECRET || 'sterling-crest-secret-key';
+const JWT_EXPIRES_IN = '7d';
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS);
@@ -39,14 +39,14 @@ export function generateOtp(): string {
 }
 
 export function generateAccountNumber(): string {
-  const prefix = "SCB";
+  const prefix = 'SCB';
   const digits = Math.floor(1000000000 + Math.random() * 9000000000).toString();
   return prefix + digits;
 }
 
 export function generateResetToken(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let token = "";
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let token = '';
   for (let i = 0; i < 64; i++) {
     token += chars.charAt(Math.floor(Math.random() * chars.length));
   }
