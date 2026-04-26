@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db, supportMessagesTable, notificationsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
-import { requireAdmin } from "../middleware/admin"; // Using the middleware you made!
+import { requireAdmin } from "../middleware/admin.js"; // Using the middleware you made!
 
 const router = Router();
 
