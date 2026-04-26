@@ -39,7 +39,7 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "@database_url",
+    "DATABASE_URL": "postgresql://neondb_owner:npg_XoxseEaHW05Z@ep-young-cake-a4u9tmqd-pooler.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require",
     "SESSION_SECRET": "@session_secret",
     "NODE_ENV": "production"
   }
