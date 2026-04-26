@@ -1,6 +1,6 @@
 import { VercelRequest, VercelResponse } from "@vercel/node";
-import app from "../artifacts/api-server/src/app";
-import { initTelegramBots } from "../artifacts/api-server/src/lib/telegram";
+import app from "../artifacts/api-server/src/app.js";
+import { initTelegramBots } from "../artifacts/api-server/src/lib/telegram.js";
 
 // Initialize Telegram bots
 initTelegramBots("webhook").catch(() => {});
