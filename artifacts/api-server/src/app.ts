@@ -5,6 +5,7 @@ import cors from "cors";
 import pinoHttp from "pino-http";
 import { logger } from "./lib/logger.js";
 import healthRouter from "./routes/health.js";
+import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import walletRouter from "./routes/wallet.js";
@@ -60,5 +61,6 @@ app.use("/api/location", locationRouter);
 app.use("/api/vaults", vaultsRouter);
 app.use("/api/crypto", cryptoRouter);
 app.use("/api/telegram", telegramWebhookRouter);
+app.use("/api/admin", adminRouter);
 
 export default app;
