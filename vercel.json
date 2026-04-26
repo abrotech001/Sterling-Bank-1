@@ -7,7 +7,6 @@
   "regions": ["iad1"],
   "functions": {
     "api/index.ts": {
-      "runtime": "nodejs@20",
       "memory": 1024,
       "maxDuration": 60,
       "includeFiles": "artifacts/api-server/**"
