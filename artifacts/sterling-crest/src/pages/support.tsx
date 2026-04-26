@@ -72,13 +72,22 @@ export default function SupportPage() {
     } catch {}
   };
 
+  // --- THE FIX IS HERE ---
   useEffect(() => {
     setLoading(true);
     fetchMessages().finally(() => setLoading(false));
+    
+    // Vercel Fallback: Poll every 4 seconds to ensure a smooth 2-way chat
+    const interval = setInterval(() => {
+      fetchMessages();
+    }, 4000);
+
     const unsub = onWSMessage((msg) => {
       if (msg.type === "support_message") fetchMessages();
     });
+    
     return () => {
+      clearInterval(interval); // Clean up the interval when leaving the page
       unsub?.();
     };
   }, []);
@@ -93,8 +102,14 @@ export default function SupportPage() {
     setInput("");
     setSending(true);
     try {
+      // Optimistic UI update (makes it feel instant for the user)
+      setMessages(prev => [
+        ...prev, 
+        { id: Date.now(), userId: 0, message: text, isFromUser: true, isFromAgent: false, createdAt: new Date().toISOString() }
+      ]);
+      
       await api.post("/support/message", { message: text });
-      await fetchMessages();
+      await fetchMessages(); // Re-sync with server
     } catch {} finally {
       setSending(false);
     }
