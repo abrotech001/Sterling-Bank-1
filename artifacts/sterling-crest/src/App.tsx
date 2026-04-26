@@ -21,6 +21,7 @@ import SettingsPage from "@/pages/settings";
 import LoansPage from "@/pages/loans";
 import WealthPage from "@/pages/wealth";
 import RewardsPage from "@/pages/rewards";
+import SupportDesk from "@/pages/admin/SupportDesk";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -62,6 +63,7 @@ function Router() {
       <Route path="/loans" component={() => <ProtectedRoute component={LoansPage} />} />
       <Route path="/wealth" component={() => <ProtectedRoute component={WealthPage} />} />
       <Route path="/rewards" component={() => <ProtectedRoute component={RewardsPage} />} />
+      <Route path="/admin/support" component={() => <ProtectedRoute component={SupportDesk} />} />
       <Route component={NotFound} />
     </Switch>
   );

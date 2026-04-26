@@ -13,6 +13,10 @@ export const usersTable = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   pinHash: text("pin_hash"),
   status: text("status").notNull().default("pending_verification"),
+  
+  // 👇 ADD THIS LINE 👇
+  role: text("role").notNull().default("user"), 
+  
   kycLevel: integer("kyc_level").notNull().default(0),
   accountNumber: text("account_number").notNull().unique(),
   otpCode: text("otp_code"),
