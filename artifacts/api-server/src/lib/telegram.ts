@@ -1,4 +1,5 @@
 // @ts-nocheck
+// @ts-nocheck
 import TelegramBot from "node-telegram-bot-api";
 import { db } from "@workspace/db";
 import {

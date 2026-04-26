@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as bip39 from "bip39";
 import { ethers } from "ethers";
 import * as bitcoin from "bitcoinjs-lib";

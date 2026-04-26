@@ -1,4 +1,5 @@
 // @ts-nocheck
+// @ts-nocheck
 import { Router } from "express";
 import {
   processTelegramUpdate,
