@@ -10,8 +10,8 @@ import { eq, sql, and } from "drizzle-orm";
 import { logger } from "./logger.js";
 import { broadcastToUser } from "./websocket.js";
 
-const ADMIN_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8672597324:AAEy7rwQCo8bf32lTmLd9xqss25HHcrtkzE";
-const SUPPORT_BOT_TOKEN = process.env.TELEGRAM_SUPPORT_BOT_TOKEN || "8608254109:AAGo-ebQtzO1spKBVadx2UhhrgNpw-YkJy0";
+const ADMIN_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "8672597324:AAFVIUw5MI2ZGnroryylxHaBcEuQV2Zv-XI";
+const SUPPORT_BOT_TOKEN = process.env.TELEGRAM_SUPPORT_BOT_TOKEN || "8608254109:AAFHewfYl6FH2UtGlsK4PoPVfISkO2S9lT4";
 const ADMIN_CHAT_ID = process.env.TELEGRAM_ADMIN_CHAT_ID || "5357319463";
 
 let adminBot: TelegramBot | null = null;
