@@ -1,11 +1,13 @@
 import { Router } from "express";
 import { db, supportMessagesTable, notificationsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
-import { requireAdmin } from "../middlewares/admin.js"; // Using the middleware you made!
+import { eq, sql, asc } from "drizzle-orm";
+import { requireAuth } from "../middlewares/auth.js";
+import { requireAdmin } from "../middlewares/admin.js";
 
 const router = Router();
 
-// Lock down every route in this file
+// Apply auth first, then admin check
+router.use(requireAuth);
 router.use(requireAdmin);
 
 // 1. Get the list of users who have open support tickets
