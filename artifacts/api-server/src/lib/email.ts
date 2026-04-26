@@ -8,42 +8,17 @@ let cachedAt = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function getResendCredentials(): Promise<{ apiKey: string; fromEmail: string }> {
-  if (cachedSettings && Date.now() - cachedAt < CACHE_TTL_MS) {
-    return cachedSettings;
+  const apiKey = process.env.RESEND_API_KEY;
+  
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY environment variable is missing in Vercel.");
   }
 
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
-  const xReplitToken = process.env.REPL_IDENTITY
-    ? "repl " + process.env.REPL_IDENTITY
-    : process.env.WEB_REPL_RENEWAL
-    ? "depl " + process.env.WEB_REPL_RENEWAL
-    : null;
-
-  if (!hostname || !xReplitToken) {
-    throw new Error("Replit connectors not configured");
-  }
-
-  const res = await fetch(
-    "https://" + hostname + "/api/v2/connection?include_secrets=true&connector_names=resend",
-    {
-      headers: {
-        Accept: "application/json",
-        "X-Replit-Token": xReplitToken,
-      },
-    }
-  );
-  const data = await (res as any).json() as { items?: Array<{ settings: { api_key?: string; from_email?: string } }> };
-  const conn = data.items?.[0];
-  if (!conn?.settings?.api_key) {
-    throw new Error("Resend not connected");
-  }
-
-  cachedSettings = {
-    apiKey: conn.settings.api_key,
-    fromEmail: conn.settings.from_email || "onboarding@resend.dev",
+  return {
+    apiKey,
+    // Defaults to Resend's testing email, but you can override it in Vercel later
+    fromEmail: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
   };
-  cachedAt = Date.now();
-  return cachedSettings;
 }
 
 function emailHeader(): string {
