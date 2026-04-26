@@ -1,11 +1,11 @@
 // @ts-nocheck
 // @ts-nocheck
+import adminRouter from "./routes/admin.js";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import { logger } from "./lib/logger.js";
 import healthRouter from "./routes/health.js";
-import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
 import usersRouter from "./routes/users.js";
 import walletRouter from "./routes/wallet.js";
