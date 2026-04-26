@@ -10,7 +10,7 @@
       "runtime": "nodejs@20",
       "memory": 1024,
       "maxDuration": 60,
-      "includeFiles": ["artifacts/api-server/**", "lib/db/**", "lib/api-zod/**"]
+      "includeFiles": "artifacts/api-server/**"
     }
   },
   "rewrites": [
