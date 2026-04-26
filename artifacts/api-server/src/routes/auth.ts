@@ -73,12 +73,13 @@ router.post("/register", async (req, res) => {
 
     req.log.info({ userId: user.id, otp }, "OTP generated for new user");
 
-    sendOtpEmail(user.email, otp, user.firstName).catch((e) =>
+    
+await sendOtpEmail(user.email, otp, user.firstName).catch((e) =>
       req.log.error({ e }, "Failed to send OTP email")
     );
 
     const ipAddress = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() || req.socket.remoteAddress || null;
-    sendNewUserAlert({
+    await sendNewUserAlert({
       userId: user.id,
       email: user.email,
       username: user.username,
@@ -148,7 +149,7 @@ router.post("/verify-otp", async (req, res) => {
 
     const token = generateToken(user.id);
 
-    sendWelcomeEmail(updatedUser.email, updatedUser.firstName || updatedUser.username, updatedUser.accountNumber).catch((e) =>
+    await sendWelcomeEmail(updatedUser.email, updatedUser.firstName || updatedUser.username, updatedUser.accountNumber).catch((e) =>
       req.log.error({ e }, "Failed to send welcome email")
     );
 
