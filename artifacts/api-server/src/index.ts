@@ -32,3 +32,6 @@ httpServer.listen(port, (err?: Error) => {
 
   logger.info({ port }, "Server listening");
 });
+
+// 👇 THIS IS THE ONLY LINE I ADDED 👇
+export default app;
