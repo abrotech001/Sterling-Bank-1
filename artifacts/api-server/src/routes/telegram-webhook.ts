@@ -11,8 +11,8 @@ import { logger } from "../lib/logger";
 
 const router: Router = Router();
 
-const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || "";
-const SETUP_TOKEN = process.env.TELEGRAM_WEBHOOK_SETUP_TOKEN || "";
+const WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || "7b2a9f1e4c8d3b5a6f0e9d8c7b6a5f4e3d2c1b0a9f8e7d6c5b4a3f2e1d0c";
+const SETUP_TOKEN = process.env.TELEGRAM_WEBHOOK_SETUP_TOKEN || "setup_key_99x_f72b_4a81_bcde_1029384756_crestfield";
 
 function checkSecret(req: { headers: Record<string, string | string[] | undefined> }): boolean {
   if (!WEBHOOK_SECRET) return false;
