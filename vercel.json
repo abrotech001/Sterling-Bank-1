@@ -1,40 +1,17 @@
 {
-  "version": 2,
-  "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build",
-  "outputDirectory": "artifacts/sterling-crest/dist/public",
+  "installCommand": "pnpm install",
   "framework": "vite",
+  "outputDirectory": "artifacts/sterling-crest/dist/public",
   "regions": ["iad1"],
-  "functions": {
-    "api/index.ts": {
-      "memory": 1024,
-      "maxDuration": 60,
-      "includeFiles": "artifacts/api-server/**"
-    }
-  },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/index.mjs"
     },
     {
       "source": "/(.*)",
       "destination": "/index.html"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        },
-        {
-          "key": "Access-Control-Allow-Credentials",
-          "value": "true"
-        }
-      ]
     }
   ]
 }
