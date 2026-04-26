@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { createServer } from "http";
-import app from "./app";
-import { logger } from "./lib/logger";
-import { initWebSocket } from "./lib/websocket";
-import { initTelegramBots } from "./lib/telegram";
+import app from "./app.js";
+import { logger } from "./lib/logger.js";
+import { initWebSocket } from "./lib/websocket.js";
+import { initTelegramBots } from "./lib/telegram.js";
 
 const rawPort = process.env["PORT"];
 

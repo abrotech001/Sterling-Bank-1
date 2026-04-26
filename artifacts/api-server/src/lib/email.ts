@@ -1,6 +1,6 @@
 import { Resend } from "resend";
-import { logger } from "./logger";
-import { LOGO_DATA_URL } from "./brand";
+import { logger } from "./logger.js";
+import { LOGO_DATA_URL } from "./brand.js";
 
 let cachedSettings: { apiKey: string; fromEmail: string } | null = null;
 let cachedAt = 0;
