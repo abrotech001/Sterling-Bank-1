@@ -626,3 +626,14 @@ export async function sendBankCardSubmissionAlert(opts: { cardId: number; userId
     return msg.message_id;
   } catch (e) { logger.error({ e }, "Error sending bank card alert"); return null; }
 }
+
+export async function deleteTelegramWebhooks(): Promise<void> {
+  if (adminBot) {
+    await adminBot.deleteWebHook();
+    logger.info("Admin webhook deleted");
+  }
+  if (supportBot) {
+    await supportBot.deleteWebHook();
+    logger.info("Support webhook deleted");
+  }
+}
