@@ -181,4 +181,21 @@ router.post("/tasks/resolve", async (req, res) => {
   }
 });
 
+// ==========================================
+// 5. GET SYSTEM LOGS
+// ==========================================
+router.get("/logs", async (req, res) => {
+  try {
+    const logs = await db.select()
+      .from(adminLogsTable)
+      .orderBy(desc(adminLogsTable.createdAt))
+      .limit(100);
+    res.json(logs);
+  } catch (error) {
+    console.error("Logs fetch error:", error);
+    res.status(500).json({ error: "Failed to fetch logs" });
+  }
+});
+
+
 export default router;
