@@ -263,25 +263,35 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
 
   // Returning: portfolio dashboard
   const totalUsd = portfolio.reduce((sum, a) => sum + a.balance * a.rate, 0);
+  const formattedTotalUsd = formatCurrency(totalUsd);
 
   return (
     <div className="space-y-5">
-      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-border rounded-2xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <div className="text-[clamp(0.7rem,2.8vw,0.75rem)] text-muted-foreground">Total Crypto Holdings (est.)</div>
-          <div className="text-[clamp(1.375rem,7vw,1.875rem)] font-bold mt-1 truncate" data-testid="text-crypto-total">{formatCurrency(totalUsd)}</div>
+      <div className="bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-border rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 w-full">
+          <div className="text-[clamp(0.7rem,2.8vw,0.85rem)] text-muted-foreground font-medium mb-1">Total Crypto Holdings (est.)</div>
+          <div 
+            className={`font-bold tracking-tight break-words ${
+              formattedTotalUsd.length > 15 ? "text-[clamp(1.25rem,4vw,1.5rem)]" :
+              formattedTotalUsd.length > 11 ? "text-[clamp(1.5rem,5vw,1.875rem)]" :
+              "text-[clamp(1.75rem,7vw,2.25rem)]"
+            }`} 
+            data-testid="text-crypto-total"
+          >
+            {formattedTotalUsd}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setSwapOpen(true)} data-testid="button-quickswap" className="text-xs">
-            <ArrowLeftRight className="w-3.5 h-3.5 mr-1" /> QuickSwap
+        <div className="flex w-full sm:w-auto gap-2 mt-2 sm:mt-0">
+          <Button variant="outline" size="sm" onClick={() => setSwapOpen(true)} data-testid="button-quickswap" className="flex-1 sm:flex-none h-10 sm:h-9 text-xs">
+            <ArrowLeftRight className="w-4 h-4 mr-1.5 sm:mr-1 sm:w-3.5 sm:h-3.5" /> QuickSwap
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setSeedOpen(true)} data-testid="button-view-seed" className="text-xs">
-            <Eye className="w-3.5 h-3.5 mr-1" /> Recovery Phrase
+          <Button variant="outline" size="sm" onClick={() => setSeedOpen(true)} data-testid="button-view-seed" className="flex-1 sm:flex-none h-10 sm:h-9 text-xs">
+            <Eye className="w-4 h-4 mr-1.5 sm:mr-1 sm:w-3.5 sm:h-3.5" /> Phrase
           </Button>
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {portfolio.map((a) => (
           <CryptoCard key={a.id} asset={a} onReceive={() => setReceiveAsset(a.id)} toast={toast} />
         ))}
@@ -327,6 +337,7 @@ function CryptoTab({ toast }: { toast: ReturnType<typeof useToast>["toast"] }) {
       </AnimatePresence>
     </div>
   );
+
 }
 
 function SwapStatus({ status }: { status: string }) {
@@ -348,41 +359,56 @@ function CryptoCard({
 }) {
   const usd = asset.balance * asset.rate;
   return (
-    <div className="bg-card border border-border rounded-2xl p-3 sm:p-4 space-y-3 min-w-0" data-testid={`card-asset-${asset.id}`}>
-      <div className="flex items-center justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-9 h-9 rounded-xl bg-background border border-border flex items-center justify-center p-1 flex-shrink-0">
-            {asset.id === "sol" ? SOLANA_LOGO_SVG : <img src={asset.logo} alt={asset.symbol} className="w-7 h-7" loading="lazy" />}
-          </div>
-          <div className="min-w-0">
-            <div className="font-semibold text-sm truncate">{asset.name}</div>
-            <div className="text-[11px] text-muted-foreground truncate">${asset.rate.toLocaleString()} / {asset.symbol}</div>
-          </div>
+    <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-col h-full gap-4 min-w-0 shadow-sm" data-testid={`card-asset-${asset.id}`}>
+      
+      {/* Top row: Logo and Price */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="w-10 h-10 rounded-xl bg-background border border-border flex items-center justify-center p-1.5 flex-shrink-0 shadow-sm">
+          {asset.id === "sol" ? SOLANA_LOGO_SVG : <img src={asset.logo} alt={asset.symbol} className="w-full h-full object-contain" loading="lazy" />}
+        </div>
+        <div className="min-w-0">
+          <div className="font-bold text-sm truncate">{asset.name}</div>
+          <div className="text-[11px] font-medium text-muted-foreground truncate">${asset.rate.toLocaleString()} / {asset.symbol}</div>
         </div>
       </div>
-      <div className="min-w-0">
-        <div className="text-[clamp(1rem,5vw,1.25rem)] font-bold truncate">{asset.balance} <span className="text-xs text-muted-foreground font-normal">{asset.symbol}</span></div>
-        <div className="text-xs text-muted-foreground truncate">≈ {formatCurrency(usd)}</div>
+      
+      {/* Middle row: Balances (No truncation!) */}
+      <div className="min-w-0 flex-1">
+        <div className="text-[clamp(1.125rem,5vw,1.375rem)] font-bold break-words leading-tight">
+          {asset.balance} <span className="text-xs text-muted-foreground font-medium ml-0.5">{asset.symbol}</span>
+        </div>
+        <div className="text-xs text-muted-foreground break-words mt-0.5">≈ {formatCurrency(usd)}</div>
+        
         {asset.pendingAmt > 0 && (
-          <div className="text-[10px] text-yellow-500 mt-0.5 truncate">{asset.pendingAmt} {asset.symbol} swap pending</div>
+          <div className="text-[10px] font-medium text-yellow-500 mt-1.5 break-words bg-yellow-500/10 w-fit px-1.5 py-0.5 rounded">
+            {asset.pendingAmt} {asset.symbol} pending
+          </div>
         )}
       </div>
-      <div className="flex items-center justify-between gap-2 bg-background border border-border rounded-lg px-2 py-1.5">
-        <span className="text-[11px] font-mono truncate" title={asset.address}>{asset.address.slice(0, 12)}…{asset.address.slice(-6)}</span>
-        <button
-          onClick={() => { navigator.clipboard.writeText(asset.address); toast({ title: "Address copied" }); }}
-          className="text-muted-foreground hover:text-foreground flex-shrink-0"
-          data-testid={`button-copy-${asset.id}`}
-        >
-          <Copy className="w-3.5 h-3.5" />
-        </button>
+
+      {/* Bottom row: Address and Button */}
+      <div className="space-y-2 mt-auto pt-2 border-t border-border/50">
+        <div className="flex items-center justify-between gap-2 bg-background/50 rounded-lg px-2.5 py-2">
+          <span className="text-[11px] font-mono text-muted-foreground truncate" title={asset.address}>
+            {asset.address.slice(0, 10)}…{asset.address.slice(-8)}
+          </span>
+          <button
+            onClick={() => { navigator.clipboard.writeText(asset.address); toast({ title: "Address copied" }); }}
+            className="text-primary hover:text-primary/80 flex-shrink-0 transition-colors"
+            data-testid={`button-copy-${asset.id}`}
+          >
+            <Copy className="w-4 h-4" />
+          </button>
+        </div>
+        <Button size="sm" variant="default" className="w-full h-10 font-semibold text-xs" onClick={onReceive} data-testid={`button-receive-${asset.id}`}>
+          <QrCode className="w-4 h-4 mr-2" /> Receive {asset.symbol}
+        </Button>
       </div>
-      <Button size="sm" variant="outline" className="w-full h-9" onClick={onReceive} data-testid={`button-receive-${asset.id}`}>
-        <QrCode className="w-3.5 h-3.5 mr-1.5" /> Receive {asset.symbol}
-      </Button>
+
     </div>
   );
 }
+
 
 function ReceiveModal({
   asset, address, onClose, toast,
