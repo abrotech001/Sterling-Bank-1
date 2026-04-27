@@ -22,6 +22,8 @@ import LoansPage from "@/pages/loans";
 import WealthPage from "@/pages/wealth";
 import RewardsPage from "@/pages/rewards";
 import SupportDesk from "@/pages/admin/SupportDesk";
+import AdminCommandCenter from "@/pages/admin/CommandCenter"; 
+
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient({
@@ -64,6 +66,7 @@ function Router() {
       <Route path="/wealth" component={() => <ProtectedRoute component={WealthPage} />} />
       <Route path="/rewards" component={() => <ProtectedRoute component={RewardsPage} />} />
       <Route path="/admin/support" component={() => <ProtectedRoute component={SupportDesk} />} />
+      <Route path="/admin/dashboard" component={AdminCommandCenter} />
       <Route component={NotFound} />
     </Switch>
   );
