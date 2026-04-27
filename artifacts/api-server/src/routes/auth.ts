@@ -382,4 +382,48 @@ router.get("/me", requireAuth, async (req, res) => {
   }
 });
 
+// ==========================================
+// RESEND OTP ROUTE
+// ==========================================
+router.post("/resend-otp", async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, parseInt(userId.toString())));
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Generate a fresh 6-digit OTP
+    const otp = generateOtp();
+    const otpExpiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
+
+    // Update the DB with the new OTP
+    await db.update(usersTable)
+      .set({ 
+        otpCode: otp, 
+        otpExpiresAt 
+      })
+      .where(eq(usersTable.id, user.id));
+
+    // Send the email using your existing function!
+    await sendOtpEmail(user.email, otp, user.firstName || user.username).catch((e) =>
+      req.log.error({ e }, "Failed to resend OTP email")
+    );
+    
+    req.log.info({ userId: user.id }, "OTP resent to user");
+
+    res.json({ success: true, message: "OTP resent successfully" });
+  } catch (error) {
+    req.log.error({ error }, "Error resending OTP");
+    res.status(500).json({ error: "Failed to resend code" });
+  }
+});
+
+
 export default router;
