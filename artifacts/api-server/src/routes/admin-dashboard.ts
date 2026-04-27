@@ -81,39 +81,50 @@ router.post("/users/:userId/action", async (req, res) => {
 // ==========================================
 router.get("/pending", async (req, res) => {
   try {
-    // Get pending transactions (Transfers, Withdrawals)
-    const pendingTxs = await db.select().from(transactionsTable).where(eq(transactionsTable.status, "pending")).orderBy(desc(transactionsTable.createdAt));
+    // 1. Fetch transactions safely
+    const pendingTxs = await db.select()
+      .from(transactionsTable)
+      .where(eq(transactionsTable.status, "pending"));
     
-    // Get pending KYC
-    const pendingKyc = await db.select().from(kycTable).where(eq(kycTable.status, "pending")).orderBy(desc(kycTable.createdAt));
+    // 2. Fetch KYC safely
+    const pendingKyc = await db.select()
+      .from(kycTable)
+      .where(eq(kycTable.status, "pending"));
 
-    // Map them into a unified "Task" array for the frontend
+    // 3. Map to tasks (with fallback values in case a column is null)
     const tasks = [
       ...pendingTxs.map(tx => ({
         id: tx.id,
         type: "transaction",
-        title: `${tx.type.toUpperCase()} Request`,
-        subtitle: `User #${tx.senderId || tx.receiverId}`,
+        title: `${(tx.type || "Unknown").toUpperCase()} Request`,
+        subtitle: `User #${tx.senderId || tx.receiverId || "N/A"}`,
         amount: `$${tx.amount}`,
-        date: tx.createdAt
+        date: tx.createdAt || new Date().toISOString()
       })),
       ...pendingKyc.map(k => ({
         id: k.id,
         type: "kyc",
-        title: `KYC Tier ${k.tier} Verification`,
-        subtitle: `Name: ${k.fullName}`,
-        date: k.createdAt
+        title: `KYC Tier ${k.tier || 2} Verification`,
+        subtitle: `Name: ${k.fullName || "Unknown"}`,
+        date: k.createdAt || new Date().toISOString()
       }))
     ];
 
-    // Sort by newest first
-    tasks.sort((a, b) => new Date(b.date!).getTime() - new Date(a.date!).getTime());
+    // Sort by newest
+    tasks.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     res.json(tasks);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch tasks" });
+  } catch (error: any) {
+    // THIS IS THE MAGIC LINE: It will show us the exact database crash
+    console.error("CRASH IN /pending:", error);
+    res.status(500).json({ 
+      error: "Failed to fetch tasks", 
+      details: error.message,
+      stack: error.stack 
+    });
   }
 });
+
 
 // ==========================================
 // 4. RESOLVE PENDING TASKS (Accept/Decline)
