@@ -203,11 +203,13 @@ router.post("/transfer", requireAuth, async (req, res) => {
     }
 
     const [wallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, userId));
+    // We check if they have enough balance (ignoring pending to prevent double-spending)
     if (!wallet || parseFloat(wallet.balance) < parseFloat(amount)) {
       res.status(400).json({ error: "Insufficient funds" });
       return;
     }
 
+    // 1. Lock the money into the Pending Balance so the UI badge shows it
     await db.update(walletsTable)
       .set({
         pendingBalance: sql`${walletsTable.pendingBalance} + ${amount}`,
@@ -215,27 +217,21 @@ router.post("/transfer", requireAuth, async (req, res) => {
       })
       .where(eq(walletsTable.userId, userId));
 
+    // 2. Create the transaction as PENDING (This sends it to your Web Admin Dashboard)
     const [tx] = await db.insert(transactionsTable).values({
       type: "transfer",
       amount: parseFloat(amount).toString(),
-      status: "pending",
+      status: "pending", 
       senderId: userId,
       receiverId: recipient.id,
       note: note || null,
     }).returning();
 
-    const msgId = await sendTransactionAlert(
-      tx.id,
-      "TRANSFER",
-      parseFloat(amount).toFixed(2),
-      `@${user.username} (#${userId})`,
-      `@${recipient.username} (${recipientAccountNumber})`,
-      note ? `Note: ${note}` : undefined
-    );
+    // 3. Removed the Telegram Alert completely as requested!
+    // It will now just quietly wait in your Web Dashboard Approvals tab.
 
-    if (msgId) {
-      await db.update(transactionsTable).set({ telegramMessageId: msgId }).where(eq(transactionsTable.id, tx.id));
-    }
+    // 4. Update the user's app live so they see the Pending badge appear
+    broadcastToUser(userId, { type: "balance_update", data: { transactionId: tx.id } });
 
     res.status(201).json({
       transaction: {
@@ -256,6 +252,7 @@ router.post("/transfer", requireAuth, async (req, res) => {
     res.status(500).json({ error: "Failed to process transfer" });
   }
 });
+
 
 router.post("/withdraw", requireAuth, async (req, res) => {
   const { amount, method, destination, bankName, accountDetails, pin, note } = req.body;
