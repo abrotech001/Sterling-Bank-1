@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 import { useAuth } from "@/hooks/use-auth";
-import { Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Eye, EyeOff, CheckCircle2, Loader2 } from "lucide-react";
 import { CrestfieldLogo } from "@/components/brand/logo";
 import type { User } from "@/lib/auth";
 import {
@@ -47,14 +47,27 @@ export default function RegisterPage() {
   const [, navigate] = useLocation();
   const { login } = useAuth();
   const { toast } = useToast();
+  
   const [step, setStep] = useState<"form" | "otp">("form");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<number | null>(null);
   const [selectedCountry, setSelectedCountry] = useState("");
 
+  // Resend OTP States
+  const [countdown, setCountdown] = useState(0);
+  const [resending, setResending] = useState(false);
+
   const { register, handleSubmit, watch, formState: { errors } } = useForm<RegForm>();
   const { register: regOtp, handleSubmit: handleOtp, formState: { errors: otpErrors } } = useForm<OtpForm>();
+
+  // Countdown Timer Effect
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
 
   const onRegister = async (data: RegForm) => {
     if (data.password !== data.confirmPassword) {
@@ -73,6 +86,10 @@ export default function RegisterPage() {
       });
       setUserId(res.userId);
       setStep("otp");
+      
+      // Start the countdown on initial load so they can't spam it immediately
+      setCountdown(30); 
+      
       toast({ 
         title: "Check your email", 
         description: "We’ve sent a verification code to your email. If you don’t see it, check your spam or junk folder." 
@@ -101,6 +118,25 @@ export default function RegisterPage() {
       toast({ title: "Verification failed", description: msg, variant: "destructive" });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (!userId || countdown > 0) return;
+    setResending(true);
+    try {
+      // Assuming your backend has this route set up. If not, it just needs to trigger the email logic again using the userId.
+      await api.post("/auth/resend-otp", { userId });
+      toast({ 
+        title: "Code Resent", 
+        description: "A new verification code has been sent to your email." 
+      });
+      setCountdown(30); // Reset timer to 30 seconds
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to resend code";
+      toast({ title: "Failed to resend", description: msg, variant: "destructive" });
+    } finally {
+      setResending(false);
     }
   };
 
@@ -237,16 +273,38 @@ export default function RegisterPage() {
                     />
                     {otpErrors.otp && <p className="text-xs text-destructive">{otpErrors.otp.message}</p>}
                   </div>
+                  
                   <Button type="submit" className="w-full h-11 text-base" disabled={loading}>
                     {loading ? "Verifying..." : "Verify & Continue"}
                   </Button>
-                  <button
-                    type="button"
-                    onClick={() => setStep("form")}
-                    className="w-full text-sm text-muted-foreground hover:text-foreground"
-                  >
-                    Back to registration
-                  </button>
+
+                  <div className="flex flex-col items-center gap-4 mt-6">
+                    <div className="text-sm text-muted-foreground">
+                      Didn't receive the code?{" "}
+                      <button
+                        type="button"
+                        onClick={handleResendOtp}
+                        disabled={countdown > 0 || resending}
+                        className="text-primary hover:underline font-medium transition-colors disabled:opacity-50 disabled:hover:no-underline"
+                      >
+                        {resending ? (
+                          <span className="flex items-center inline-flex gap-1"><Loader2 className="w-3 h-3 animate-spin"/> Sending...</span>
+                        ) : countdown > 0 ? (
+                          `Resend in ${countdown}s`
+                        ) : (
+                          "Resend code"
+                        )}
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep("form")}
+                      className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Back to registration
+                    </button>
+                  </div>
                 </form>
               </motion.div>
             )}
