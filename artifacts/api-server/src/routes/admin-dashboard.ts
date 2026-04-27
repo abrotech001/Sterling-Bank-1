@@ -129,8 +129,11 @@ router.get("/pending", async (req, res) => {
 // ==========================================
 // 4. RESOLVE PENDING TASKS (Accept/Decline)
 // ==========================================
+// ==========================================
+// 4. RESOLVE PENDING TASKS (Accept/Decline)
+// ==========================================
 router.post("/tasks/resolve", async (req, res) => {
-  const { id, type, action } = req.body; // action = "approve" or "reject"
+  const { id, type, action } = req.body; 
   const isApprove = action === "approve";
 
   try {
@@ -144,12 +147,39 @@ router.post("/tasks/resolve", async (req, res) => {
 
       if (!tx) return res.status(404).json({ error: "Transaction not found or already processed" });
 
-      // Handle balance updates for approvals
-      if (isApprove && tx.type === "transfer" && tx.senderId && tx.receiverId) {
-        await db.update(walletsTable).set({ balance: sql`balance - ${tx.amount}` }).where(eq(walletsTable.userId, tx.senderId));
-        await db.update(walletsTable).set({ balance: sql`balance + ${tx.amount}` }).where(eq(walletsTable.userId, tx.receiverId));
-      } else if (isApprove && tx.type === "withdrawal" && tx.senderId) {
-        await db.update(walletsTable).set({ balance: sql`balance - ${tx.amount}` }).where(eq(walletsTable.userId, tx.senderId));
+      // 🚨 THE BULLETPROOF PENDING FIX 🚨
+      if (tx.senderId) {
+        // 1. Fetch the sender's wallet to see the current pending amount
+        const [senderWallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, tx.senderId));
+        
+        if (senderWallet) {
+          // 2. Do the math in Javascript (not SQL) so it cannot fail
+          const currentPending = parseFloat(senderWallet.pendingBalance?.toString() || "0");
+          const txAmount = parseFloat(tx.amount?.toString() || "0");
+          
+          // Subtract the amount. If it goes below zero, force it to "0".
+          const newPending = Math.max(0, currentPending - txAmount).toString();
+
+          if (isApprove) {
+            // APPROVE: Deduct main balance AND set the new pending balance
+            await db.update(walletsTable).set({ 
+              balance: sql`${walletsTable.balance} - ${tx.amount}`,
+              pendingBalance: newPending 
+            }).where(eq(walletsTable.userId, tx.senderId));
+
+            // Credit the receiver (if it's a transfer)
+            if (tx.type === "transfer" && tx.receiverId) {
+              await db.update(walletsTable).set({ 
+                balance: sql`${walletsTable.balance} + ${tx.amount}` 
+              }).where(eq(walletsTable.userId, tx.receiverId));
+            }
+          } else {
+            // DECLINE: Only wipe the pending balance, do NOT touch main balance
+            await db.update(walletsTable).set({ 
+              pendingBalance: newPending 
+            }).where(eq(walletsTable.userId, tx.senderId));
+          }
+        }
       }
 
       await db.insert(adminLogsTable).values({ action: `${action}_transaction`, details: `${action} TX #${id} via Web` });
@@ -180,6 +210,7 @@ router.post("/tasks/resolve", async (req, res) => {
     res.status(500).json({ error: "Failed to resolve task" });
   }
 });
+
 
 // ==========================================
 // 5. GET SYSTEM LOGS
