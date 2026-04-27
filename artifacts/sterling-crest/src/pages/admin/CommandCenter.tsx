@@ -2,49 +2,116 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, AlertCircle, CheckCircle, XCircle, 
-  Wallet, ShieldAlert, CreditCard, Activity, Search
+  Wallet, ShieldAlert, CreditCard, Activity, Search, RefreshCw
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-// Mock types until we connect the backend
 type PendingTask = { id: number; type: "kyc" | "transaction" | "card" | "swap"; title: string; subtitle: string; amount?: string; date: string };
 type UserStats = { id: number; username: string; email: string; balance: string; status: "active" | "frozen" };
 
 export default function AdminCommandCenter() {
   const [activeTab, setActiveTab] = useState<"approvals" | "users" | "logs">("approvals");
-  
-  // These will be fetched from your backend in Step 2
-  const [tasks, setTasks] = useState<PendingTask[]>([
-    { id: 1, type: "transaction", title: "Transfer Request", subtitle: "User #4 to Account 0987654321", amount: "$500.00", date: "10 mins ago" },
-    { id: 2, type: "kyc", title: "KYC Tier 3 Upload", subtitle: "Proof of Address - User @abro", date: "1 hour ago" },
-    { id: 3, type: "card", title: "Virtual Card Activation", subtitle: "User #12", fee: "$5.00", date: "2 hours ago" } as any
-  ]);
+  const [tasks, setTasks] = useState<PendingTask[]>([]);
+  const [users, setUsers] = useState<UserStats[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
-  const [users, setUsers] = useState<UserStats[]>([
-    { id: 4, username: "abro", email: "abro@example.com", balance: "$12,450.00", status: "active" },
-    { id: 5, username: "john_doe", email: "john@test.com", balance: "$0.00", status: "frozen" }
-  ]);
+  const getAuthHeaders = () => {
+    const t = localStorage.getItem("scb_token");
+    return { "Content-Type": "application/json", Authorization: t ? `Bearer ${t}` : "" };
+  };
 
-  const handleAction = async (taskId: number, action: "approve" | "reject") => {
-    // Optimistic UI removal
+  const fetchData = async () => {
+    try {
+      const [tasksRes, usersRes] = await Promise.all([
+        fetch("/api/admin/dashboard/pending", { headers: getAuthHeaders() }),
+        fetch("/api/admin/dashboard/users", { headers: getAuthHeaders() })
+      ]);
+
+      if (tasksRes.ok) setTasks(await tasksRes.json());
+      if (usersRes.ok) setUsers(await usersRes.json());
+    } catch (e) {
+      console.error("Dashboard fetch error:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load and polling every 10 seconds
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleAction = async (taskId: number, taskType: string, action: "approve" | "reject") => {
+    // Optimistic UI: remove it from screen instantly
     setTasks(prev => prev.filter(t => t.id !== taskId));
     
-    // In Step 2, we will add the real API call here:
-    // await fetch(`/api/admin/tasks/${taskId}/${action}`, { method: 'POST', ... })
-    alert(`Task #${taskId} ${action}d successfully!`);
+    try {
+      const res = await fetch("/api/admin/dashboard/tasks/resolve", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ id: taskId, type: taskType, action })
+      });
+      if (!res.ok) throw new Error("Server rejected action");
+    } catch (error) {
+      alert("Failed to process request. Check your connection.");
+      fetchData(); // Resync if it failed
+    }
   };
 
-  const handleUserAction = (userId: number, action: "freeze" | "unfreeze" | "fund") => {
-    alert(`Action [${action}] triggered for User #${userId}. We will wire this to the backend next!`);
+  const handleUserAction = async (userId: number, action: "freeze" | "unfreeze" | "fund") => {
+    let amount = 0, reason = "";
+    
+    if (action === "fund") {
+      const amountInput = prompt("Enter amount to fund (e.g., 500):");
+      if (!amountInput) return;
+      amount = parseFloat(amountInput);
+      if (isNaN(amount) || amount <= 0) return alert("Invalid amount entered.");
+      reason = prompt("Enter narration/reason:") || "Admin Funding";
+    }
+
+    // Optimistic UI for freeze/unfreeze
+    if (action !== "fund") {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: action === "freeze" ? "frozen" : "active" } : u));
+    }
+
+    try {
+      const res = await fetch(`/api/admin/dashboard/users/${userId}/action`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ action, amount, reason })
+      });
+      
+      if (!res.ok) throw new Error("Action failed");
+      
+      if (action === "fund") {
+        alert(`✅ Successfully funded $${amount.toFixed(2)}`);
+        fetchData(); // Refresh to show new balance
+      }
+    } catch (error) {
+      alert("Failed to perform user action.");
+      fetchData();
+    }
   };
+
+  const filteredUsers = users.filter(u => 
+    u.username.toLowerCase().includes(search.toLowerCase()) || 
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    u.id.toString() === search
+  );
 
   return (
     <div className="flex flex-col h-[100dvh] bg-slate-50 md:flex-row font-sans">
       
-      {/* --- DESKTOP SIDEBAR (Hidden on Mobile) --- */}
+      {/* --- DESKTOP SIDEBAR --- */}
       <div className="hidden md:flex flex-col w-64 bg-slate-900 text-white p-4 shrink-0">
-        <div className="font-bold text-xl mb-8 tracking-tight">Crestfield Admin</div>
+        <div className="font-bold text-xl mb-8 tracking-tight flex items-center justify-between">
+          Crestfield Admin
+          {loading && <RefreshCw className="w-4 h-4 animate-spin opacity-50" />}
+        </div>
         <div className="space-y-2">
           <NavItem icon={<AlertCircle/>} label="Approvals" active={activeTab === "approvals"} onClick={() => setActiveTab("approvals")} badge={tasks.length} />
           <NavItem icon={<Users/>} label="User Management" active={activeTab === "users"} onClick={() => setActiveTab("users")} />
@@ -54,7 +121,9 @@ export default function AdminCommandCenter() {
 
       {/* --- MOBILE TOP HEADER --- */}
       <div className="md:hidden bg-slate-900 text-white p-4 flex items-center justify-between shadow-md z-10 shrink-0">
-        <div className="font-bold tracking-tight">Admin Center</div>
+        <div className="font-bold tracking-tight flex items-center gap-2">
+          Admin Center {loading && <RefreshCw className="w-3 h-3 animate-spin opacity-50" />}
+        </div>
         {activeTab === "approvals" && tasks.length > 0 && (
           <span className="bg-rose-500 text-white text-[10px] px-2 py-1 rounded-full font-bold">
             {tasks.length} Pending
@@ -70,7 +139,7 @@ export default function AdminCommandCenter() {
           <div className="max-w-3xl mx-auto space-y-4">
             <h2 className="text-xl font-bold text-slate-800 mb-6 hidden md:block">Pending Action Queue</h2>
             
-            {tasks.length === 0 ? (
+            {!loading && tasks.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                 <CheckCircle className="w-16 h-16 mb-4 opacity-20" />
                 <p>All caught up! No pending requests.</p>
@@ -79,8 +148,8 @@ export default function AdminCommandCenter() {
               <AnimatePresence>
                 {tasks.map(task => (
                   <motion.div 
-                    key={task.id}
-                    exit={{ opacity: 0, x: -50 }}
+                    key={`${task.type}-${task.id}`}
+                    exit={{ opacity: 0, scale: 0.95 }}
                     className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 justify-between"
                   >
                     <div className="flex items-start gap-3">
@@ -97,15 +166,17 @@ export default function AdminCommandCenter() {
                         <h3 className="font-bold text-slate-800">{task.title}</h3>
                         <p className="text-sm text-slate-500">{task.subtitle}</p>
                         {task.amount && <p className="font-bold text-emerald-600 mt-1">{task.amount}</p>}
-                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">{task.date}</p>
+                        <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
+                          {new Date(task.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </p>
                       </div>
                     </div>
                     
                     <div className="flex sm:flex-col gap-2 shrink-0 border-t sm:border-t-0 sm:border-l border-slate-100 pt-3 sm:pt-0 sm:pl-4 mt-2 sm:mt-0">
-                      <Button onClick={() => handleAction(task.id, "approve")} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1 h-9">
+                      <Button onClick={() => handleAction(task.id, task.type, "approve")} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-1 h-9">
                         <CheckCircle className="w-4 h-4"/> Accept
                       </Button>
-                      <Button onClick={() => handleAction(task.id, "reject")} variant="outline" className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 gap-1 h-9">
+                      <Button onClick={() => handleAction(task.id, task.type, "reject")} variant="outline" className="flex-1 border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 gap-1 h-9">
                         <XCircle className="w-4 h-4"/> Decline
                       </Button>
                     </div>
@@ -122,11 +193,16 @@ export default function AdminCommandCenter() {
             <div className="flex items-center gap-2 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input placeholder="Search user ID, email, or username..." className="pl-9 bg-white" />
+                <Input 
+                  placeholder="Search user ID, email, or username..." 
+                  className="pl-9 bg-white"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
               </div>
             </div>
 
-            {users.map(user => (
+            {filteredUsers.map(user => (
               <div key={user.id} className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
@@ -136,7 +212,7 @@ export default function AdminCommandCenter() {
                     </span>
                   </div>
                   <p className="text-sm text-slate-500">{user.email} • ID: #{user.id}</p>
-                  <p className="font-mono text-sm mt-1 text-slate-600">Bal: {user.balance}</p>
+                  <p className="font-mono text-sm mt-1 text-slate-600">Bal: ${parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                   <Button onClick={() => handleUserAction(user.id, "fund")} size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
@@ -158,7 +234,7 @@ export default function AdminCommandCenter() {
         )}
       </div>
 
-      {/* --- MOBILE BOTTOM NAVIGATION (Hidden on Desktop) --- */}
+      {/* --- MOBILE BOTTOM NAVIGATION --- */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around p-2 pb-safe z-20">
         <MobileTab icon={<AlertCircle/>} label="Approvals" active={activeTab === "approvals"} onClick={() => setActiveTab("approvals")} badge={tasks.length}/>
         <MobileTab icon={<Users/>} label="Users" active={activeTab === "users"} onClick={() => setActiveTab("users")} />
