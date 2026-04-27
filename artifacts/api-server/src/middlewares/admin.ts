@@ -13,7 +13,7 @@ export const requireAdmin = async (req: Request, res: Response, next: NextFuncti
     
     // THE BYPASS: We check a Vercel Environment Variable instead of a database column.
     // If the variable isn't set, it defaults to your email.
-    const adminEmails = process.env.ADMIN_EMAILS || "abrahamtemitope247@gmail.com";
+    const adminEmails = process.env.ADMIN_EMAILS || "freefireagent29@gmail.com";
 
     if (!user || !adminEmails.includes(user.email)) {
       return res.status(403).json({ error: "Forbidden: Admin access required" });
