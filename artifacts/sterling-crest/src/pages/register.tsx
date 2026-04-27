@@ -63,10 +63,10 @@ export default function RegisterPage() {
 
   // Countdown Timer Effect
   useEffect(() => {
-    if (countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-      return () => clearTimeout(timer);
-    }
+    if (countdown === 0) return () => {}; // <-- This guarantees it always returns a function!
+    
+    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    return () => clearTimeout(timer);
   }, [countdown]);
 
   const onRegister = async (data: RegForm) => {
