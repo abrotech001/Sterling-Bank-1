@@ -1,6 +1,7 @@
 // @ts-nocheck
 // @ts-nocheck
 import adminRouter from "./routes/admin.js";
+import adminDashboardRouter from "./routes/admin-dashboard.js";
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
