@@ -111,11 +111,15 @@ export default function DashboardPage() {
                   {loading ? (
                     <Skeleton className="h-9 w-44" />
                   ) : (
-                    <div className="flex items-center gap-2 min-w-0">
-                      <h2 className="text-[clamp(1.375rem,8vw,2.25rem)] font-bold tracking-tight truncate">
-                        {balanceVisible ? balance : "••••••"}
+                    <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                      <h2 className={`font-bold tracking-tight break-words ${
+                        balanceVisible && balance.length > 15 ? "text-[clamp(1rem,4vw,1.5rem)]" :
+                        balanceVisible && balance.length > 11 ? "text-[clamp(1.15rem,5vw,1.875rem)]" :
+                        "text-[clamp(1.375rem,8vw,2.25rem)]"
+                      }`}>
+                        {balanceVisible ? balance : "****"}
                       </h2>
-                      <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground flex-shrink-0">
+                      <button onClick={() => setBalanceVisible(!balanceVisible)} className="text-muted-foreground hover:text-foreground flex-shrink-0 mt-1 cursor-pointer">
                         {balanceVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
