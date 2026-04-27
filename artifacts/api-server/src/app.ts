@@ -63,5 +63,6 @@ app.use("/api/vaults", vaultsRouter);
 app.use("/api/crypto", cryptoRouter);
 app.use("/api/telegram", telegramWebhookRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/dashboard", adminDashboardRouter);
 
 export default app;
