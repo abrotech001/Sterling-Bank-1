@@ -73,7 +73,11 @@ export default function RegisterPage() {
       });
       setUserId(res.userId);
       setStep("otp");
-      toast({ title: "OTP sent!", description: "Check your email for the verification code." });
+      toast({ 
+        title: "Check your email", 
+        description: "We’ve sent a verification code to your email. If you don’t see it, check your spam or junk folder." 
+      });
+
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Registration failed";
       toast({ title: "Registration failed", description: msg, variant: "destructive" });
@@ -119,10 +123,10 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold">
             {step === "form" ? "Open your account" : "Verify your email"}
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm max-w-sm mx-auto">
             {step === "form"
               ? "Join Crestfield Bank today"
-              : "Enter the 6-digit code sent to your email"}
+              : "We’ve sent a verification code to your email. If you don’t see it, check your spam or junk folder."}
           </p>
         </div>
 
