@@ -122,13 +122,14 @@ export default function SupportDesk() {
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="flex h-[calc(100vh-8rem)] min-h-[600px] border border-border rounded-2xl overflow-hidden bg-card shadow-lg m-4">
+    // Fixed container: dynamic viewport height (dvh) for mobile, full width on mobile, rounded with margin on desktop
+    <div className="flex h-[calc(100dvh-4rem)] md:h-[calc(100vh-8rem)] w-full md:w-auto md:border border-border md:rounded-2xl overflow-hidden bg-card md:shadow-lg md:m-4">
       
-      {/* --- LEFT SIDEBAR (Hidden on mobile if chat is open) --- */}
+      {/* --- LEFT SIDEBAR --- */}
       <div className={`flex-col w-full md:w-80 md:min-w-[320px] border-r border-border bg-muted/10 ${selected ? "hidden md:flex" : "flex"}`}>
-        <div className="p-4 border-b border-border bg-card">
+        <div className="p-4 border-b border-border bg-card shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-sm shrink-0">
               <MessageSquare className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
@@ -138,7 +139,7 @@ export default function SupportDesk() {
           </div>
         </div>
 
-        <div className="px-4 py-3 flex items-center justify-between border-b border-border/50 bg-card/50">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-border/50 bg-card/50 shrink-0">
           <span className="text-xs font-bold tracking-wider text-muted-foreground uppercase">
             Active Tickets
           </span>
@@ -197,7 +198,7 @@ export default function SupportDesk() {
         </div>
       </div>
 
-      {/* --- RIGHT MAIN PANEL (Hidden on mobile if no chat is selected) --- */}
+      {/* --- RIGHT MAIN PANEL --- */}
       <div className={`flex-1 flex-col bg-background ${!selected ? "hidden md:flex" : "flex"}`}>
         {!selected ? (
           <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground space-y-4 p-8 text-center">
@@ -211,12 +212,12 @@ export default function SupportDesk() {
           </div>
         ) : (
           <>
-            {/* Chat Header */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+            {/* Chat Header - FIXED FOR MOBILE */}
+            <div className="flex items-center gap-3 px-3 py-3 md:px-4 border-b border-border bg-card shrink-0">
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="md:hidden mr-1 shrink-0" 
+                className="md:hidden shrink-0 h-9 w-9 -ml-1" 
                 onClick={() => setSelected(null)}
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -227,19 +228,20 @@ export default function SupportDesk() {
               </div>
               
               <div className="flex-1 min-w-0">
-                <p className="font-bold text-foreground text-sm truncate flex items-center gap-2">
-                  {formatName(selected)}
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] uppercase tracking-wider">Online</span>
-                </p>
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-                  <span className="flex items-center gap-1"><UserCircle2 className="w-3 h-3"/> @{selected.username}</span>
-                  <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3"/> {selected.email}</span>
+                <div className="flex items-center gap-2">
+                  <p className="font-bold text-foreground text-sm truncate">{formatName(selected)}</p>
+                  <span className="shrink-0 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[9px] uppercase tracking-wider font-semibold">Online</span>
+                </div>
+                {/* Fixed truncation logic here to prevent squishing */}
+                <div className="flex items-center gap-2 md:gap-3 text-xs text-muted-foreground mt-0.5 overflow-hidden">
+                  <span className="flex items-center gap-1 shrink-0"><UserCircle2 className="w-3 h-3"/><span className="truncate max-w-[80px] md:max-w-none">@{selected.username}</span></span>
+                  <span className="flex items-center gap-1 min-w-0"><Mail className="w-3 h-3"/><span className="truncate">{selected.email}</span></span>
                 </div>
               </div>
             </div>
 
             {/* Chat Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/10 custom-scrollbar">
               {messages.length === 0 && (
                 <div className="text-center py-10 text-muted-foreground">
                   <p className="text-sm">No messages yet. Say hello!</p>
@@ -254,7 +256,7 @@ export default function SupportDesk() {
                     animate={{ opacity: 1, y: 0 }}
                     className={`flex ${m.isFromUser ? "justify-start" : "justify-end"}`}
                   >
-                    <div className={`max-w-[75%] px-4 py-3 rounded-2xl text-sm shadow-sm ${
+                    <div className={`max-w-[85%] md:max-w-[75%] px-4 py-3 rounded-2xl text-sm shadow-sm break-words ${
                       m.isFromUser
                         ? "bg-card border border-border text-foreground rounded-bl-sm"
                         : "bg-primary text-primary-foreground rounded-br-sm"
@@ -272,11 +274,11 @@ export default function SupportDesk() {
                   </motion.div>
                 ))}
               </AnimatePresence>
-              <div ref={scrollRef} className="h-1" />
+              <div ref={scrollRef} className="h-1 shrink-0" />
             </div>
 
             {/* Input Bar */}
-            <div className="p-3 bg-card border-t border-border">
+            <div className="p-3 bg-card border-t border-border shrink-0 pb-safe">
               <form 
                 onSubmit={send} 
                 className="flex items-center gap-2 bg-muted/30 border border-border rounded-xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 transition-all"
@@ -285,15 +287,15 @@ export default function SupportDesk() {
                   ref={inputRef}
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
-                  placeholder={`Reply to ${selected.first_name || selected.username}...`}
+                  placeholder="Type a reply..."
                   disabled={sending}
-                  className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 px-3"
+                  className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0 px-3 h-10"
                 />
                 <Button 
                   type="submit" 
                   size="icon"
                   disabled={!reply.trim() || sending}
-                  className="shrink-0 h-9 w-9 rounded-lg transition-transform active:scale-95"
+                  className="shrink-0 h-10 w-10 rounded-lg transition-transform active:scale-95"
                 >
                   <Send className="w-4 h-4" />
                 </Button>
