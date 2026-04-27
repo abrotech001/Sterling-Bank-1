@@ -69,6 +69,23 @@ router.post("/users/:userId/action", async (req, res) => {
       return res.json({ success: true, message: "Funds added successfully" });
     }
 
+    if (action === "delete") {
+      // 1. Delete their wallet first (to avoid foreign key constraint errors)
+      await db.delete(walletsTable).where(eq(walletsTable.userId, userId));
+      
+      // 2. Delete any KYC records
+      await db.delete(kycTable).where(eq(kycTable.userId, userId));
+      
+      // 3. Finally, delete the actual user account (logins, config, etc)
+      await db.delete(usersTable).where(eq(usersTable.id, userId));
+      
+      // Log it
+      await db.insert(adminLogsTable).values({ action: "delete_user", targetUserId: userId, details: `Permanently deleted user #${userId} and all associated data.` });
+      
+      return res.json({ success: true, message: "User deleted" });
+    }
+
+
     res.status(400).json({ error: "Invalid action" });
   } catch (error) {
     console.error("Action error:", error);
