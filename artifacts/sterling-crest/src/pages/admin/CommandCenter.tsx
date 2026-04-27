@@ -64,9 +64,15 @@ export default function AdminCommandCenter() {
     }
   };
 
-  const handleUserAction = async (userId: number, action: "freeze" | "unfreeze" | "fund") => {
+  const handleUserAction = async (userId: number, action: "freeze" | "unfreeze" | "fund" | "delete") => {
     let amount = 0, reason = "";
     
+    // 🚨 DELETE WARNING PROMPT
+    if (action === "delete") {
+      const confirmWipe = window.confirm(`⚠️ WARNING: Are you absolutely sure you want to PERMANENTLY delete User #${userId}? This cannot be undone.`);
+      if (!confirmWipe) return;
+    }
+
     if (action === "fund") {
       const amountInput = prompt("Enter amount to fund (e.g., 500):");
       if (!amountInput) return;
@@ -75,8 +81,11 @@ export default function AdminCommandCenter() {
       reason = prompt("Enter narration/reason:") || "Admin Funding";
     }
 
-    if (action !== "fund") {
+    // Optimistic UI updates
+    if (action === "freeze" || action === "unfreeze") {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: action === "freeze" ? "frozen" : "active" } : u));
+    } else if (action === "delete") {
+      setUsers(prev => prev.filter(u => u.id !== userId));
     }
 
     try {
@@ -89,6 +98,7 @@ export default function AdminCommandCenter() {
       if (!res.ok) throw new Error("Action failed");
       
       if (action === "fund") alert(`✅ Successfully funded $${amount.toFixed(2)}`);
+      if (action === "delete") alert(`✅ User #${userId} has been permanently deleted.`);
       fetchData(); 
     } catch (error) {
       alert("Failed to perform user action.");
@@ -213,16 +223,26 @@ export default function AdminCommandCenter() {
                   <p className="text-sm text-slate-500">{user.email} • ID: #{user.id}</p>
                   <p className="font-mono text-sm mt-1 text-slate-600">Bal: ${parseFloat(user.balance).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button onClick={() => handleUserAction(user.id, "fund")} size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                
+                {/* 🚨 UPDATED BUTTON GROUP 🚨 */}
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                  {/* DELETE */}
+                  <Button onClick={() => handleUserAction(user.id, "delete")} size="sm" variant="outline" className="flex-1 sm:flex-none border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700">
+                    Delete
+                  </Button>
+                  
+                  {/* FUND */}
+                  <Button onClick={() => handleUserAction(user.id, "fund")} size="sm" className="flex-1 sm:flex-none bg-blue-600 hover:bg-blue-700 text-white">
                     Fund
                   </Button>
+                  
+                  {/* FREEZE / UNFREEZE */}
                   {user.status === 'active' ? (
-                    <Button onClick={() => handleUserAction(user.id, "freeze")} size="sm" variant="outline" className="flex-1 border-rose-200 text-rose-600">
+                    <Button onClick={() => handleUserAction(user.id, "freeze")} size="sm" variant="outline" className="flex-1 sm:flex-none border-rose-200 text-rose-600 hover:bg-rose-50">
                       Freeze
                     </Button>
                   ) : (
-                    <Button onClick={() => handleUserAction(user.id, "unfreeze")} size="sm" variant="outline" className="flex-1 border-emerald-200 text-emerald-600">
+                    <Button onClick={() => handleUserAction(user.id, "unfreeze")} size="sm" variant="outline" className="flex-1 sm:flex-none border-emerald-200 text-emerald-600 hover:bg-emerald-50">
                       Unfreeze
                     </Button>
                   )}
@@ -256,7 +276,7 @@ export default function AdminCommandCenter() {
                         <div className="flex items-center gap-2">
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${
                             log.action.includes('approve') || log.action.includes('unfreeze') || log.action.includes('fund') ? 'bg-emerald-900/50 text-emerald-400' :
-                            log.action.includes('reject') || log.action.includes('freeze') ? 'bg-rose-900/50 text-rose-400' :
+                            log.action.includes('reject') || log.action.includes('freeze') || log.action.includes('delete') ? 'bg-rose-900/50 text-rose-400' :
                             'bg-blue-900/50 text-blue-400'
                           }`}>
                             {log.action.replace(/_/g, ' ')}
