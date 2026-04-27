@@ -2,18 +2,20 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, AlertCircle, CheckCircle, XCircle, 
-  Wallet, ShieldAlert, CreditCard, Activity, Search, RefreshCw
+  Wallet, ShieldAlert, CreditCard, Activity, Search, RefreshCw, Terminal
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 type PendingTask = { id: number; type: "kyc" | "transaction" | "card" | "swap"; title: string; subtitle: string; amount?: string; date: string };
 type UserStats = { id: number; username: string; email: string; balance: string; status: "active" | "frozen" };
+type AdminLog = { id: number; action: string; targetUserId: number | null; details: string; createdAt: string };
 
 export default function AdminCommandCenter() {
   const [activeTab, setActiveTab] = useState<"approvals" | "users" | "logs">("approvals");
   const [tasks, setTasks] = useState<PendingTask[]>([]);
   const [users, setUsers] = useState<UserStats[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -24,13 +26,15 @@ export default function AdminCommandCenter() {
 
   const fetchData = async () => {
     try {
-      const [tasksRes, usersRes] = await Promise.all([
+      const [tasksRes, usersRes, logsRes] = await Promise.all([
         fetch("/api/admin/dashboard/pending", { headers: getAuthHeaders() }),
-        fetch("/api/admin/dashboard/users", { headers: getAuthHeaders() })
+        fetch("/api/admin/dashboard/users", { headers: getAuthHeaders() }),
+        fetch("/api/admin/dashboard/logs", { headers: getAuthHeaders() })
       ]);
 
       if (tasksRes.ok) setTasks(await tasksRes.json());
       if (usersRes.ok) setUsers(await usersRes.json());
+      if (logsRes.ok) setLogs(await logsRes.json());
     } catch (e) {
       console.error("Dashboard fetch error:", e);
     } finally {
@@ -38,7 +42,6 @@ export default function AdminCommandCenter() {
     }
   };
 
-  // Initial load and polling every 10 seconds
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 10000);
@@ -46,9 +49,7 @@ export default function AdminCommandCenter() {
   }, []);
 
   const handleAction = async (taskId: number, taskType: string, action: "approve" | "reject") => {
-    // Optimistic UI: remove it from screen instantly
     setTasks(prev => prev.filter(t => t.id !== taskId));
-    
     try {
       const res = await fetch("/api/admin/dashboard/tasks/resolve", {
         method: "POST",
@@ -56,9 +57,10 @@ export default function AdminCommandCenter() {
         body: JSON.stringify({ id: taskId, type: taskType, action })
       });
       if (!res.ok) throw new Error("Server rejected action");
+      fetchData(); // Refresh logs after action
     } catch (error) {
       alert("Failed to process request. Check your connection.");
-      fetchData(); // Resync if it failed
+      fetchData(); 
     }
   };
 
@@ -73,7 +75,6 @@ export default function AdminCommandCenter() {
       reason = prompt("Enter narration/reason:") || "Admin Funding";
     }
 
-    // Optimistic UI for freeze/unfreeze
     if (action !== "fund") {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: action === "freeze" ? "frozen" : "active" } : u));
     }
@@ -87,10 +88,8 @@ export default function AdminCommandCenter() {
       
       if (!res.ok) throw new Error("Action failed");
       
-      if (action === "fund") {
-        alert(`✅ Successfully funded $${amount.toFixed(2)}`);
-        fetchData(); // Refresh to show new balance
-      }
+      if (action === "fund") alert(`✅ Successfully funded $${amount.toFixed(2)}`);
+      fetchData(); 
     } catch (error) {
       alert("Failed to perform user action.");
       fetchData();
@@ -230,6 +229,47 @@ export default function AdminCommandCenter() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* LOGS TAB */}
+        {activeTab === "logs" && (
+          <div className="max-w-4xl mx-auto space-y-4">
+            <h2 className="text-xl font-bold text-slate-800 mb-6 hidden md:block">System Activity Logs</h2>
+            
+            <div className="bg-slate-900 rounded-2xl p-4 md:p-6 shadow-xl border border-slate-800 overflow-hidden">
+              <div className="flex items-center gap-2 mb-4 text-slate-400 border-b border-slate-800 pb-3">
+                <Terminal className="w-4 h-4" />
+                <span className="text-xs font-mono tracking-widest uppercase">Live Audit Trail</span>
+              </div>
+              
+              <div className="space-y-4 font-mono text-sm">
+                {!loading && logs.length === 0 ? (
+                  <p className="text-slate-500 text-center py-10">No system logs found.</p>
+                ) : (
+                  logs.map(log => (
+                    <div key={log.id} className="flex flex-col md:flex-row md:items-start gap-2 md:gap-4 pb-4 border-b border-slate-800/50 last:border-0 last:pb-0">
+                      <div className="text-slate-500 shrink-0 text-xs mt-0.5 w-32">
+                        {new Date(log.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase ${
+                            log.action.includes('approve') || log.action.includes('unfreeze') || log.action.includes('fund') ? 'bg-emerald-900/50 text-emerald-400' :
+                            log.action.includes('reject') || log.action.includes('freeze') ? 'bg-rose-900/50 text-rose-400' :
+                            'bg-blue-900/50 text-blue-400'
+                          }`}>
+                            {log.action.replace(/_/g, ' ')}
+                          </span>
+                          {log.targetUserId && <span className="text-slate-400 text-xs">User #{log.targetUserId}</span>}
+                        </div>
+                        <p className="text-slate-300 mt-1">{log.details}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
