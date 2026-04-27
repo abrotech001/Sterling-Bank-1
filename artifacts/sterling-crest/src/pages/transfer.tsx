@@ -30,9 +30,11 @@ export default function TransferPage() {
   const [, navigate] = useLocation();
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [txId, setTxId] = useState<number | null>(null);
+  const [sentAmount, setSentAmount] = useState<string>("0");
+
 
   const [recipient, setRecipient] = useState<Recipient | null>(null);
   const [lookupError, setLookupError] = useState<string | null>(null);
@@ -82,6 +84,7 @@ export default function TransferPage() {
         }
       );
       setTxId(res.transaction?.id ?? res.transactionId ?? null);
+      setSentAmount(data.amount);
       setSuccess(true);
       reset();
       setRecipient(null);
@@ -93,32 +96,57 @@ export default function TransferPage() {
     }
   };
 
-  if (success) {
+    if (success) {
     return (
       <DashboardLayout>
-        <div className="max-w-md mx-auto pt-12">
+        <div className="max-w-md mx-auto pt-12 px-4">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-card border border-border rounded-2xl p-8 text-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-card border border-border rounded-[2rem] p-8 text-center shadow-sm"
           >
-            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="w-10 h-10 text-primary" />
+            <div className="w-24 h-24 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-12 h-12 text-emerald-500" />
             </div>
-            <h2 className="text-2xl font-bold mb-2">Transfer Submitted</h2>
-            <p className="text-muted-foreground mb-6">
-              Your transfer has been submitted and is pending approval. You'll be notified once it's processed.
+            
+            <h2 className="text-2xl font-bold text-foreground mb-2">Payment Sent</h2>
+            
+            <p className="text-lg text-foreground mb-1">
+              Your payment of <span className="font-bold">{formatCurrency(parseFloat(sentAmount))}</span> is on its way.
             </p>
-            {txId !== null && <p className="text-xs text-muted-foreground mb-6">Transaction ID: #{txId}</p>}
-            <div className="flex gap-3">
-              <Button className="flex-1" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
-              <Button variant="outline" className="flex-1" onClick={() => setSuccess(false)}>New Transfer</Button>
+            
+            <p className="text-sm text-muted-foreground mb-8">
+              It may take a short time to arrive to the recipient.
+            </p>
+            
+            {txId !== null && (
+              <div className="bg-muted/50 rounded-2xl p-4 mb-8 border border-border flex justify-between items-center">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Receipt ID</span>
+                <span className="text-sm font-mono font-medium text-foreground">#{txId}</span>
+              </div>
+            )}
+            
+            <div className="flex flex-col gap-3">
+              <Button 
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl h-12 text-base font-semibold" 
+                onClick={() => navigate("/dashboard")}
+              >
+                Done
+              </Button>
+              <Button 
+                variant="ghost" 
+                className="w-full text-muted-foreground hover:text-foreground rounded-xl h-12" 
+                onClick={() => { setSuccess(false); setTxId(null); }}
+              >
+                Send Another Transfer
+              </Button>
             </div>
           </motion.div>
         </div>
       </DashboardLayout>
     );
   }
+
 
   return (
     <DashboardLayout>
