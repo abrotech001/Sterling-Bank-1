@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, usersTable, walletsTable, transactionsTable, kycTable, adminLogsTable, notificationsTable } from "@workspace/db";
-import { eq, sql, and, desc } from "drizzle-orm";
+// 🚨 Notice I added 'or' to the imports here!
+import { eq, sql, and, desc, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
 import { requireAdmin } from "../middlewares/admin.js";
 import { broadcastToUser } from "../lib/websocket.js";
@@ -30,7 +31,7 @@ router.get("/users", async (req, res) => {
 });
 
 // ==========================================
-// 2. USER ACTIONS (Freeze, Unfreeze, Fund)
+// 2. USER ACTIONS (Freeze, Unfreeze, Fund, Delete)
 // ==========================================
 router.post("/users/:userId/action", async (req, res) => {
   const userId = parseInt(req.params.userId);
@@ -69,22 +70,50 @@ router.post("/users/:userId/action", async (req, res) => {
       return res.json({ success: true, message: "Funds added successfully" });
     }
 
+    // 🚨 THE NEW BULLETPROOF DELETE SEQUENCE 🚨
     if (action === "delete") {
-      // 1. Delete their wallet first (to avoid foreign key constraint errors)
-      await db.delete(walletsTable).where(eq(walletsTable.userId, userId));
-      
-      // 2. Delete any KYC records
-      await db.delete(kycTable).where(eq(kycTable.userId, userId));
-      
-      // 3. Finally, delete the actual user account (logins, config, etc)
-      await db.delete(usersTable).where(eq(usersTable.id, userId));
-      
-      // Log it
-      await db.insert(adminLogsTable).values({ action: "delete_user", targetUserId: userId, details: `Permanently deleted user #${userId} and all associated data.` });
-      
-      return res.json({ success: true, message: "User deleted" });
-    }
+      try {
+        // 1. Wipe Notifications
+        await db.delete(notificationsTable).where(eq(notificationsTable.userId, userId));
+        
+        // 2. Wipe Transactions (where they sent OR received money)
+        await db.delete(transactionsTable).where(
+          or(
+            eq(transactionsTable.senderId, userId),
+            eq(transactionsTable.receiverId, userId)
+          )
+        );
 
+        // 3. Wipe Admin Logs targeting this user
+        await db.delete(adminLogsTable).where(eq(adminLogsTable.targetUserId, userId));
+
+        // 4. Wipe KYC Records
+        await db.delete(kycTable).where(eq(kycTable.userId, userId));
+
+        // 5. Wipe Wallet
+        await db.delete(walletsTable).where(eq(walletsTable.userId, userId));
+
+        // (NOTE: If you get a 500 error again because of the Crypto wallet feature, 
+        // uncomment these two lines below to wipe their crypto data too!)
+        // await db.execute(sql`DELETE FROM crypto_swaps WHERE user_id = ${userId}`);
+        // await db.execute(sql`DELETE FROM crypto_wallets WHERE user_id = ${userId}`);
+
+        // 6. FINALLY, Delete the User
+        await db.delete(usersTable).where(eq(usersTable.id, userId));
+
+        // Log the action (targetUserId is null because the user is gone)
+        await db.insert(adminLogsTable).values({ 
+          action: "delete_user", 
+          details: `Permanently deleted user #${userId} and all associated data.` 
+        });
+
+        return res.json({ success: true, message: "User deleted" });
+      } catch (dbError: any) {
+        // If the database still blocks it, this will tell us EXACTLY which table is causing it
+        console.error("Database constraint block:", dbError.message);
+        return res.status(500).json({ error: "DB Constraint", details: dbError.message });
+      }
+    }
 
     res.status(400).json({ error: "Invalid action" });
   } catch (error) {
@@ -98,17 +127,14 @@ router.post("/users/:userId/action", async (req, res) => {
 // ==========================================
 router.get("/pending", async (req, res) => {
   try {
-    // 1. Fetch transactions safely
     const pendingTxs = await db.select()
       .from(transactionsTable)
       .where(eq(transactionsTable.status, "pending"));
     
-    // 2. Fetch KYC safely
     const pendingKyc = await db.select()
       .from(kycTable)
       .where(eq(kycTable.status, "pending"));
 
-    // 3. Map to tasks (with fallback values in case a column is null)
     const tasks = [
       ...pendingTxs.map(tx => ({
         id: tx.id,
@@ -127,12 +153,10 @@ router.get("/pending", async (req, res) => {
       }))
     ];
 
-    // Sort by newest
     tasks.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     res.json(tasks);
   } catch (error: any) {
-    // THIS IS THE MAGIC LINE: It will show us the exact database crash
     console.error("CRASH IN /pending:", error);
     res.status(500).json({ 
       error: "Failed to fetch tasks", 
@@ -142,10 +166,6 @@ router.get("/pending", async (req, res) => {
   }
 });
 
-
-// ==========================================
-// 4. RESOLVE PENDING TASKS (Accept/Decline)
-// ==========================================
 // ==========================================
 // 4. RESOLVE PENDING TASKS (Accept/Decline)
 // ==========================================
@@ -164,34 +184,26 @@ router.post("/tasks/resolve", async (req, res) => {
 
       if (!tx) return res.status(404).json({ error: "Transaction not found or already processed" });
 
-      // 🚨 THE BULLETPROOF PENDING FIX 🚨
       if (tx.senderId) {
-        // 1. Fetch the sender's wallet to see the current pending amount
         const [senderWallet] = await db.select().from(walletsTable).where(eq(walletsTable.userId, tx.senderId));
         
         if (senderWallet) {
-          // 2. Do the math in Javascript (not SQL) so it cannot fail
           const currentPending = parseFloat(senderWallet.pendingBalance?.toString() || "0");
           const txAmount = parseFloat(tx.amount?.toString() || "0");
-          
-          // Subtract the amount. If it goes below zero, force it to "0".
           const newPending = Math.max(0, currentPending - txAmount).toString();
 
           if (isApprove) {
-            // APPROVE: Deduct main balance AND set the new pending balance
             await db.update(walletsTable).set({ 
               balance: sql`${walletsTable.balance} - ${tx.amount}`,
               pendingBalance: newPending 
             }).where(eq(walletsTable.userId, tx.senderId));
 
-            // Credit the receiver (if it's a transfer)
             if (tx.type === "transfer" && tx.receiverId) {
               await db.update(walletsTable).set({ 
                 balance: sql`${walletsTable.balance} + ${tx.amount}` 
               }).where(eq(walletsTable.userId, tx.receiverId));
             }
           } else {
-            // DECLINE: Only wipe the pending balance, do NOT touch main balance
             await db.update(walletsTable).set({ 
               pendingBalance: newPending 
             }).where(eq(walletsTable.userId, tx.senderId));
@@ -228,7 +240,6 @@ router.post("/tasks/resolve", async (req, res) => {
   }
 });
 
-
 // ==========================================
 // 5. GET SYSTEM LOGS
 // ==========================================
@@ -244,6 +255,5 @@ router.get("/logs", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch logs" });
   }
 });
-
 
 export default router;
