@@ -23,13 +23,13 @@ export function connectWS(token: string) {
     } catch {}
   };
 
-    ws.onclose = () => {
+  ws.onclose = () => {
     ws = null;
-    const t = localStorage.getItem("scb_token");
-    // Temporarily disabled auto-reconnect to stop console spam
-    // if (t) setTimeout(() => connectWS(t), 3000);
+    // Temporarily disabled auto-reconnect to stop the console spam
+    // const t = localStorage.getItem("scb_token");
+    // if (t) setTimeout(() => connectWS(t), 3000); 
   };
-
+}
 
 export function disconnectWS() {
   ws?.close();
