@@ -70,38 +70,37 @@ router.post("/users/:userId/action", async (req, res) => {
       return res.json({ success: true, message: "Funds added successfully" });
     }
 
-    // 🚨 THE NEW BULLETPROOF DELETE SEQUENCE 🚨
+    // 🚨 THE ULTIMATE BULLETPROOF DELETE SEQUENCE 🚨
     if (action === "delete") {
       try {
-        // 1. Wipe Notifications
+        // 1. Wipe standard tables (using your existing imports)
         await db.delete(notificationsTable).where(eq(notificationsTable.userId, userId));
-        
-        // 2. Wipe Transactions (where they sent OR received money)
         await db.delete(transactionsTable).where(
           or(
             eq(transactionsTable.senderId, userId),
             eq(transactionsTable.receiverId, userId)
           )
         );
-
-        // 3. Wipe Admin Logs targeting this user
         await db.delete(adminLogsTable).where(eq(adminLogsTable.targetUserId, userId));
-
-        // 4. Wipe KYC Records
         await db.delete(kycTable).where(eq(kycTable.userId, userId));
 
-        // 5. Wipe Wallet
+        // 2. Wipe the newly discovered tables using Raw SQL (no extra imports needed!)
+        await db.execute(sql`DELETE FROM cards WHERE user_id = ${userId}`).catch(() => console.log('No cards to delete'));
+        await db.execute(sql`DELETE FROM crypto_swaps WHERE user_id = ${userId}`).catch(() => console.log('No crypto swaps'));
+        await db.execute(sql`DELETE FROM crypto_wallets WHERE user_id = ${userId}`).catch(() => console.log('No crypto wallet'));
+        await db.execute(sql`DELETE FROM savings_vaults WHERE user_id = ${userId}`).catch(() => console.log('No savings vaults'));
+        
+        // Wipe support messages first, then the tickets themselves
+        await db.execute(sql`DELETE FROM support_messages WHERE user_id = ${userId}`).catch(() => console.log('No support msgs'));
+        await db.execute(sql`DELETE FROM support_tickets WHERE user_id = ${userId}`).catch(() => console.log('No support tickets'));
+
+        // 3. Wipe Main Wallet
         await db.delete(walletsTable).where(eq(walletsTable.userId, userId));
 
-        // (NOTE: If you get a 500 error again because of the Crypto wallet feature, 
-        // uncomment these two lines below to wipe their crypto data too!)
-        // await db.execute(sql`DELETE FROM crypto_swaps WHERE user_id = ${userId}`);
-        // await db.execute(sql`DELETE FROM crypto_wallets WHERE user_id = ${userId}`);
-
-        // 6. FINALLY, Delete the User
+        // 4. FINALLY, Delete the User
         await db.delete(usersTable).where(eq(usersTable.id, userId));
 
-        // Log the action (targetUserId is null because the user is gone)
+        // Log the deletion
         await db.insert(adminLogsTable).values({ 
           action: "delete_user", 
           details: `Permanently deleted user #${userId} and all associated data.` 
@@ -109,11 +108,11 @@ router.post("/users/:userId/action", async (req, res) => {
 
         return res.json({ success: true, message: "User deleted" });
       } catch (dbError: any) {
-        // If the database still blocks it, this will tell us EXACTLY which table is causing it
         console.error("Database constraint block:", dbError.message);
         return res.status(500).json({ error: "DB Constraint", details: dbError.message });
       }
     }
+
 
     res.status(400).json({ error: "Invalid action" });
   } catch (error) {
