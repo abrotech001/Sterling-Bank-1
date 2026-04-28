@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, usersTable, walletsTable, transactionsTable, kycTable, adminLogsTable, notificationsTable } from "@workspace/db";
+import { db, usersTable, walletsTable, transactionsTable, kycTable, adminLogsTable, notificationsTable, cardsTable } from "@workspace/db";
 // 🚨 Notice I added 'or' to the imports here!
 import { eq, sql, and, desc, or } from "drizzle-orm";
 import { requireAuth } from "../middlewares/auth.js";
@@ -134,6 +134,11 @@ router.get("/pending", async (req, res) => {
       .from(kycTable)
       .where(eq(kycTable.status, "pending"));
 
+    // 🚨 NEW: Fetch the pending cards!
+    const pendingCards = await db.select()
+      .from(cardsTable)
+      .where(eq(cardsTable.status, "pending_activation"));
+
     const tasks = [
       ...pendingTxs.map(tx => ({
         id: tx.id,
@@ -149,6 +154,14 @@ router.get("/pending", async (req, res) => {
         title: `KYC Tier ${k.tier || 2} Verification`,
         subtitle: `Name: ${k.fullName || "Unknown"}`,
         date: k.createdAt || new Date().toISOString()
+      })),
+      // 🚨 NEW: Map the cards into the task list!
+      ...pendingCards.map(c => ({
+        id: c.id,
+        type: "card",
+        title: `New ${c.cardType === 'credit' ? 'Credit' : 'Debit'} Card`,
+        subtitle: `User #${c.userId} • Name: ${c.cardName} (****${c.last4})`,
+        date: c.createdAt || new Date().toISOString()
       }))
     ];
 
@@ -157,13 +170,10 @@ router.get("/pending", async (req, res) => {
     res.json(tasks);
   } catch (error: any) {
     console.error("CRASH IN /pending:", error);
-    res.status(500).json({ 
-      error: "Failed to fetch tasks", 
-      details: error.message,
-      stack: error.stack 
-    });
+    res.status(500).json({ error: "Failed to fetch tasks" });
   }
 });
+
 
 // ==========================================
 // 4. RESOLVE PENDING TASKS (Accept/Decline)
@@ -215,6 +225,28 @@ router.post("/tasks/resolve", async (req, res) => {
       
       return res.json({ success: true });
     }
+
+      // 🚨 NEW: Handle Card Approvals/Rejections
+    if (type === "card") {
+      const nextStatus = isApprove ? "active" : "rejected"; // Approving makes it 'active'
+      
+      const [card] = await db.update(cardsTable).set({ 
+        status: nextStatus,
+        ...(isApprove ? {} : { declineReason: "Declined by Admin via Dashboard" }) 
+      }).where(eq(cardsTable.id, id)).returning();
+      
+      if (!card) return res.status(404).json({ error: "Card not found" });
+
+      await db.insert(adminLogsTable).values({ 
+        action: `${action}_card`, 
+        details: `${action} Card #${id} (****${card.last4}) via Web` 
+      });
+      
+      broadcastToUser(card.userId, { type: "card_update", data: { status: nextStatus } });
+      
+      return res.json({ success: true });
+    }
+
 
     if (type === "kyc") {
       const nextStatus = isApprove ? "approved" : "rejected";
